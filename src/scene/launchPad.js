@@ -236,9 +236,9 @@ export class LaunchPad {
    * World position of the rocket's tail centre when sitting on the deflector,
    * hung beside the rod by a launch lug.
    */
-  rocketTail(bodyRadius) {
+  rocketTail(bodyRadius, standoff = 0.003) {
     const lugOffset = bodyRadius + 0.0028 + this.rodSpec.dia / 2;
-    const p = new THREE.Vector3(lugOffset, this.deflectorY + 0.0005, 0);
+    const p = new THREE.Vector3(lugOffset, this.deflectorY + standoff, 0);
     return this.tilt.localToWorld(p);
   }
 

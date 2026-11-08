@@ -278,6 +278,7 @@ class App {
       source = { positions: this.raw };
     }
     this.geom = geom;
+    this._mountCache = null;
     this.estimatedMass = estimateAirframeMass(geom);
     if (!st.massAuto && fresh) st.massAuto = true;
 
@@ -434,9 +435,16 @@ class App {
     });
   }
 
+  /** Rocket tail position on the pad: the motor nozzle rests on the deflector. */
+  tailOnPad() {
+    const layout = this.motorLayout();
+    const minAft = Math.min(0, ...(layout[0]?.motors.map((m) => m.yAft) || [0]));
+    return this.pad.rocketTail(this.geom.refRadius, -minAft + 0.003);
+  }
+
   launchParams(seed) {
     const L = this.state.launch;
-    const tail = this.pad.rocketTail(this.geom.refRadius);
+    const tail = this.tailOnPad();
     return {
       rodLength: ROD_SPECS[L.rod].len,
       rodAngle: L.angle,
@@ -488,8 +496,17 @@ class App {
   }
 
   // ===================================================================== pad placement
+  alignRoll() {
+    const tail = this.tailOnPad();
+    const rodPt = this.pad.tilt.worldToLocal(tail.clone());
+    rodPt.x = 0;
+    this.pad.tilt.localToWorld(rodPt);
+    this.model.alignRollToRod(this.pad.rodDirection(), rodPt.sub(tail));
+  }
+
   placeOnPad() {
-    const tail = this.pad.rocketTail(this.geom.refRadius);
+    this.alignRoll();
+    const tail = this.tailOnPad();
     this.model.resetAttachments();
     this.model.setPose(tail, this.pad.rodDirection());
     this.model.updateAttached();
@@ -499,7 +516,8 @@ class App {
   /** Before loading: separated parts lie beside the pad as in the file; one-piece rockets wait above the rod. */
   placeForLoading() {
     this.model.resetAttachments();
-    const tail = this.pad.rocketTail(this.geom.refRadius);
+    this.alignRoll();
+    const tail = this.tailOnPad();
     const dir = this.pad.rodDirection();
     this.model.setPose(tail, dir);
     this.model.updateAttached();
@@ -529,9 +547,9 @@ class App {
 
   /** Animate stacking: each stage (bottom first) moves above the rod, then slides down into place. */
   startLoadAnimation() {
-    const tailFinal = this.pad.rocketTail(this.geom.refRadius);
+    const tailFinal = this.tailOnPad();
     const dir = this.pad.rodDirection();
-    const qFinal = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    const qFinal = this.model.orient(dir);
     const rodTopH = this.pad.rodSpec.len + 0.1;
     const items = this.model.sections.map((sec, i) => {
       const above = tailFinal.clone().addScaledVector(dir, rodTopH - sec.y0 + 0.05);
@@ -566,6 +584,7 @@ class App {
       it.sec.group.quaternion.copy(q);
     }
     this.model.updateAttached();
+    this.model.updateClipping();
     if (A.t >= A.total) {
       this.loadAnim = null;
       this.placeOnPad();
@@ -921,7 +940,7 @@ class App {
         const ang = Math.min(1, (t - t0) * 1.5) * (t - t0) * b.spin;
         axis = a0.clone().applyAxisAngle(perp, ang);
       }
-      sec.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+      sec.group.quaternion.copy(this.model.orient(axis));
       sec.group.position.copy(p).addScaledVector(axis, -b.cgFromTail);
     }
     model.updateClipping();
@@ -1119,9 +1138,9 @@ class App {
     switch (this.view) {
       case 'controller': {
         const C = CONTROLLER_POS;
-        const eye = C.clone().addScaledVector(this.toPad, -0.42).add(new THREE.Vector3(0, 0.42, 0));
-        cam.position.lerp(eye, ease);
-        const look = C.clone().addScaledVector(this.toPad, 1.4).add(new THREE.Vector3(0, -0.1, 0));
+        const eye = C.clone().addScaledVector(this.toPad, -0.3).add(new THREE.Vector3(0, 0.36, 0));
+        cam.position.lerp(eye, 1 - Math.exp(-dt * 6));
+        const look = C.clone().addScaledVector(this.toPad, 0.9).add(new THREE.Vector3(0, 0.02, 0));
         cam.lookAt(look);
         cam.fov += (55 - cam.fov) * ease;
         break;
@@ -1131,7 +1150,7 @@ class App {
         cam.position.lerp(eye, ease);
         cam.lookAt(target);
         const dist = cam.position.distanceTo(target);
-        const want = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan((this.geom.length * 7 + 0.002 * dist) / dist)), 1.2, 60);
+        const want = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan((this.geom.length * 3 + 0.002 * dist) / dist)), 1.2, 40);
         cam.fov += (want - cam.fov) * (1 - Math.exp(-dt * 2));
         break;
       }

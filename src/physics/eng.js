@@ -100,8 +100,7 @@ export function impulseClass(I) {
 }
 
 /** Percentage of the class range used: e.g. a 9 N·s C motor is "90% C". */
-export function classPercent(I) {
-  const letter = impulseClass(I);
+export function classPercent(I, letter = impulseClass(I)) {
   const upper = { '1/8A': 0.3125, '1/4A': 0.625, '1/2A': 1.25, A: 2.5, B: 5, C: 10, D: 20, E: 40, F: 80, G: 160, H: 320, I: 640, J: 1280 }[letter];
   if (!upper) return 100;
   const lower = upper / 2;

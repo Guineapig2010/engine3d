@@ -26,7 +26,9 @@ test('motor database covers A–F with every delay variant', () => {
   }
   for (const cls of ['A', 'B', 'C', 'D', 'E', 'F']) assert.ok(motors.some((m) => m.cls === cls), `no ${cls} motors`);
   // impulses fall in their NAR class
-  for (const m of motors) assert.equal(impulseClass(m.impulse), m.cls);
+  // certified impulses fall in (or within 1 % of) their designated class
+  for (const m of motors) assert.ok(impulseClass(m.impulse) === m.cls || impulseClass(m.impulse * 0.99) === m.cls, `${m.designation} ${m.impulse}`);
+  assert.equal(getMotor('Estes-C6-0').cls, 'C');
   const c6 = getMotor('Estes-C6-5');
   assert.ok(c6.impulse > 8.5 && c6.impulse < 10, `C6 impulse ${c6.impulse}`);
   assert.ok(c6.peakThrust > 13 && c6.peakThrust < 15);

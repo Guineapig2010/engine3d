@@ -219,6 +219,8 @@ export function analyzeRocket(positions, opts = {}) {
   for (const f of finSets) {
     for (let i = f.i0; i <= f.i1; i++) finGroupsA[i] = f.count;
   }
+  // fin angles in the rocket frame (angle in the local x–z plane, from +x toward +z)
+  for (const f of finSets) f.angles = f.rawAngles.map((t) => (noseAtMax ? -t : t));
   // Outer (wetted) skin area per slice — used for the mass model so that
   // hollow vs. solid CAD models and internal parts don't skew the estimate.
   const shellArea = new Float64Array(nSlices);
@@ -359,6 +361,31 @@ function findFinSets({ nSlices, dx, xs, rb, noBody, finSpan, binR, rRef }) {
     let best = -1;
     for (const [g, n] of counts) if (n > best || (n === best && g > count)) { best = n; count = g; }
     if (count < 2) continue;
+    // angular positions of the fins (raw u/v plane) at the slice with the largest span
+    let iMax = i0;
+    for (let i = i0; i <= i1; i++) if (finSpan[i] > finSpan[iMax]) iMax = i;
+    const angles = [];
+    {
+      const thr = rb[iMax] + 0.4 * finSpan[iMax];
+      const above = [];
+      for (let b = 0; b < BINS; b++) above.push(binR(iMax, b) > thr);
+      const start = above.findIndex((v, b) => !v && above[(b + 1) % BINS]);
+      if (start >= 0) {
+        let sx = 0;
+        let sy = 0;
+        for (let k = 1; k <= BINS; k++) {
+          const b = (start + k) % BINS;
+          if (above[b]) {
+            const ang = -Math.PI + ((b + 0.5) / BINS) * 2 * Math.PI;
+            sx += Math.cos(ang);
+            sy += Math.sin(ang);
+          } else if (sx || sy) {
+            angles.push(Math.atan2(sy, sx));
+            sx = sy = 0;
+          }
+        }
+      }
+    }
 
     // planform from the span profile: x is distance from nose
     // root chord: fin slices that are attached to the body
@@ -392,7 +419,7 @@ function findFinSets({ nSlices, dx, xs, rb, noBody, finSpan, binR, rRef }) {
     let rBody = 0;
     for (let i = i0; i <= i1; i++) rBody += rb[i];
     rBody /= i1 - i0 + 1;
-    sets.push({ i0, i1, count, Cr, Ct, span, sweep, xLE: xRootLE, area, rBody });
+    sets.push({ i0, i1, count, Cr, Ct, span, sweep, xLE: xRootLE, area, rBody, rawAngles: angles });
   }
   return sets;
 }

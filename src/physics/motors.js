@@ -14,8 +14,11 @@ function enrich(m) {
   m.avgThrust = s.avgThrust;
   m.burnTime = s.burnTime;
   m.certBurnTime = s.certBurnTime;
-  m.classPercent = classPercent(s.impulse);
-  m.cls = impulseClass(s.impulse);
+  // The class comes from the designation (a C6-0 is a C even though its certified
+  // sample measured 10.02 N·s); fall back to the measured impulse for odd names.
+  const named = /^(1\/[248]A|[A-O])/.exec(m.common || '');
+  m.cls = named ? named[1] : impulseClass(s.impulse);
+  m.classPercent = Math.max(0, Math.min(100, classPercent(s.impulse, m.cls)));
   return m;
 }
 motors.forEach(enrich);

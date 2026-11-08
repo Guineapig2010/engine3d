@@ -250,10 +250,10 @@ export class RocketModel {
     this.igniterWires = [];
     for (const s of [-1, 1]) {
       const curve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(s * 0.0012, 0, 0),
-        new THREE.Vector3(s * 0.003, -0.012, 0),
-        new THREE.Vector3(s * 0.016, -0.03, 0.004),
-        new THREE.Vector3(s * 0.03, -0.038, 0.012),
+        new THREE.Vector3(s * 0.0012, 0.002, 0),
+        new THREE.Vector3(s * 0.002, -0.002, 0),
+        new THREE.Vector3(s * 0.012, -0.0045, 0.006),
+        new THREE.Vector3(s * 0.026, -0.0035, 0.016),
       ]);
       const w = new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.00045, 5), copper);
       ig.add(w);
@@ -324,8 +324,32 @@ export class RocketModel {
   /** Place the whole stack: tail position and axis direction (world). */
   setPose(tail, axis) {
     this.root.position.copy(tail);
-    this.root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis.clone().normalize());
+    this.root.quaternion.copy(this.orient(axis));
     this.root.updateMatrixWorld(true);
+  }
+
+  /** Orientation for a body axis, including the fixed roll that keeps the rod between the fins. */
+  orient(axis) {
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis.clone().normalize());
+    return q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.roll || 0));
+  }
+
+  /**
+   * Roll the rocket so the launch rod (direction rodWorld from the rocket axis)
+   * passes midway between two fins of the aft-most fin set.
+   */
+  alignRollToRod(axis, rodWorld) {
+    const fins = [...this.geom.finSets].sort((a, b) => b.xLE - a.xLE)[0];
+    if (!fins || !fins.angles?.length) {
+      this.roll = 0;
+      return;
+    }
+    const q0 = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis.clone().normalize());
+    const d = rodWorld.clone().applyQuaternion(q0.invert());
+    const psiRod = Math.atan2(d.z, d.x);
+    const psiMid = fins.angles[0] + Math.PI / fins.count;
+    // three.js rotation about +y by φ maps local angle ψ to ψ − φ (in the x→z sense used here)
+    this.roll = -(psiRod - psiMid);
   }
 
   /** Pose from simulator state (CG position p, axis a, CG distance from nose). */
@@ -456,7 +480,7 @@ export class RocketModel {
     this.updateAttached();
     // nose cone hangs from the canopy above the body
     const bodyTop = tail.clone().addScaledVector(axis, this.noseBase);
-    const cordLen = Math.min(1.2, 1.8 * L);
+    const cordLen = Math.min(0.7, 0.25 + 0.6 * L);
     let noseBaseP;
     if (landed) noseBaseP = bodyTop.clone().addScaledVector(axis, 0.12 + 0.3 * k).setY(this.geom.refRadius);
     else noseBaseP = P.clone().add(new THREE.Vector3(0, cordLen * Math.min(1, k * 2), 0));

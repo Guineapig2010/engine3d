@@ -143,12 +143,12 @@ export class Effects {
         vel[1] * 0.3 - axis[1] * ex + (Math.random() - 0.5) * 2,
         vel[2] * 0.3 - axis[2] * ex + (Math.random() - 0.5) * 2,
       ];
-      const shade = 0.9 + Math.random() * 0.1;
+      const shade = 0.78 + Math.random() * 0.14;
       this.smoke.emit(p, v, {
         life: delayPhase ? 4 + Math.random() * 3 : 7 + Math.random() * 6,
-        s0: delayPhase ? 0.03 : 0.05,
-        s1: delayPhase ? 0.6 + Math.random() * 0.6 : 1.4 + Math.random() * 1.6,
-        a0: delayPhase ? 0.35 : 0.55,
+        s0: delayPhase ? 0.05 : 0.12,
+        s1: delayPhase ? 0.8 + Math.random() * 0.8 : 1.8 + Math.random() * 2,
+        a0: delayPhase ? 0.4 : 0.7,
         color: [c[0] * shade, c[1] * shade, c[2] * shade],
         drag: 2.2,
       });
