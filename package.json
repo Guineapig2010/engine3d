@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "node --test test/*.test.mjs",
     "build:motors": "node tools/build-motors.mjs",
-    "build:examples": "node tools/gen-examples.mjs"
+    "build:examples": "node tools/gen-examples.mjs",
+    "build:single": "vite build && node tools/build-artifact.mjs"
   },
   "license": "MIT",
   "dependencies": {

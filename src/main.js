@@ -192,8 +192,9 @@ class App {
   async loadExample(id) {
     const ex = EXAMPLES.find((e) => e.id === id);
     if (!ex) return;
-    const res = await fetch(ex.file);
-    const buf = await res.arrayBuffer();
+    // single-file builds embed the example STLs as base64 (no network access needed)
+    const embedded = window.__EXAMPLE_STL?.[ex.file];
+    const buf = embedded ? base64ToArrayBuffer(embedded) : await (await fetch(ex.file)).arrayBuffer();
     const st = this.state;
     st.exampleId = id;
     st.color = ex.color;
@@ -1123,8 +1124,8 @@ class App {
     } else if (v === 'controller') {
       const C = CONTROLLER_POS;
       to = {
-        p: C.clone().addScaledVector(this.toPad, -0.3).add(new THREE.Vector3(0, 0.36, 0)),
-        l: C.clone().addScaledVector(this.toPad, 0.9).add(new THREE.Vector3(0, 0.02, 0)),
+        p: C.clone().addScaledVector(this.toPad, -0.35).add(new THREE.Vector3(0, 0.45, 0)),
+        l: C.clone().addScaledVector(this.toPad, 0.5).add(new THREE.Vector3(0, 0.02, 0)),
         fov: 55,
       };
     } else if (v === 'free') {
@@ -1273,6 +1274,13 @@ function phaseName(s, t, sim) {
 
 function ease(x) {
   return x * x * (3 - 2 * x);
+}
+
+function base64ToArrayBuffer(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out.buffer;
 }
 
 function guessUnits(pos) {
