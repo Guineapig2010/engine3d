@@ -140,7 +140,7 @@ class App {
     );
 
     const el = this.world.renderer.domElement;
-    el.addEventListener('pointerdown', (e) => {
+    el.addEventListener('mousedown', (e) => {
       this.sound.ensure();
       if (this.closeup.active || this.view !== 'eyes') return;
       const holding = this.g.controller === 'hand';
@@ -155,7 +155,7 @@ class App {
         else this.player.binoHeld = true;
       }
     });
-    window.addEventListener('pointerup', (e) => {
+    window.addEventListener('mouseup', (e) => {
       this.player.endDragLook();
       if (this.closeup.active) return;
       if (e.button === 0) this.setLaunchPressed(false);

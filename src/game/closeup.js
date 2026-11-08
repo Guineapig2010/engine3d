@@ -22,9 +22,11 @@ export class CloseUp {
     this.marker.renderOrder = 20;
     this.marker.visible = false;
     app.scene.add(this.marker);
-    dom.addEventListener('pointerdown', (e) => this.down(e));
-    window.addEventListener('pointermove', (e) => this.move(e));
-    window.addEventListener('pointerup', (e) => this.up(e));
+    // mouse events (not pointer events): browsers send no second pointerdown while
+    // another button is held, and you hold the key (right) while pressing LAUNCH (left)
+    dom.addEventListener('mousedown', (e) => this.down(e));
+    window.addEventListener('mousemove', (e) => this.move(e));
+    window.addEventListener('mouseup', (e) => this.up(e));
     dom.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
