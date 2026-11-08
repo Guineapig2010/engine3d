@@ -4,7 +4,7 @@
 // to their target on screen.
 import * as THREE from 'three';
 
-const SNAP_PX = 46;
+const SNAP_PX = 60;
 
 export class CloseUp {
   constructor(app) {
