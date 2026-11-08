@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rocket Flight Lab</title>
+    <meta name="description" content="Load any STL model rocket, fit real A–F motors and launch it from a detailed pad and controller." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 4c8 8 12 20 12 32l6 12-10-4-4 8h-8l-4-8-10 4 6-12c0-12 4-24 12-32z' fill='%23ff6a1f'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="viewport"></div>
+
+      <header id="topbar">
+        <div class="brand"><span class="logo">▲</span> Rocket Flight Lab</div>
+        <div class="views" id="viewButtons">
+          <button data-view="pad" title="Look at the launch pad">Pad</button>
+          <button data-view="controller" title="Stand at the launch controller">Controller</button>
+          <button data-view="track" title="Spectator camera that tracks the rocket">Track</button>
+          <button data-view="chase" title="Chase camera">Chase</button>
+          <button data-view="onboard" title="Onboard camera looking down">Onboard</button>
+          <button data-view="free" title="Free orbit camera">Free</button>
+        </div>
+        <div class="tools">
+          <label class="toggle"><input type="checkbox" id="xray" /> X-ray / CG·CP</label>
+          <label class="toggle"><input type="checkbox" id="sound" checked /> Sound</label>
+        </div>
+      </header>
+
+      <aside id="panel">
+        <nav class="tabs" id="tabs">
+          <button data-tab="rocket" class="active">Rocket</button>
+          <button data-tab="motors">Motors</button>
+          <button data-tab="recovery">Recovery</button>
+          <button data-tab="site">Launch site</button>
+          <button data-tab="catalog">Motor catalog</button>
+        </nav>
+        <div class="tab-body" id="tabBody"></div>
+      </aside>
+
+      <section id="sequence">
+        <div class="seq-title">Launch sequence</div>
+        <ol id="seqSteps"></ol>
+        <div class="seq-actions" id="seqActions"></div>
+        <div class="seq-msg" id="seqMsg"></div>
+      </section>
+
+      <section id="hud" class="hidden">
+        <div class="hud-grid">
+          <div><span class="k">T+</span><span id="hudT">0.00</span> s</div>
+          <div><span class="k">ALT</span><span id="hudAlt">0</span> m</div>
+          <div><span class="k">VEL</span><span id="hudVel">0</span> m/s</div>
+          <div><span class="k">ACC</span><span id="hudAcc">0</span> g</div>
+          <div><span class="k">THRUST</span><span id="hudThr">0</span> N</div>
+          <div><span class="k">PHASE</span><span id="hudPhase">—</span></div>
+        </div>
+        <canvas id="hudChart"></canvas>
+        <div class="hud-controls">
+          <button data-speed="0.25">¼×</button>
+          <button data-speed="0.5">½×</button>
+          <button data-speed="1" class="active">1×</button>
+          <button data-speed="2">2×</button>
+          <button data-speed="5">5×</button>
+          <button id="skipEnd">Skip ▸▸</button>
+        </div>
+      </section>
+
+      <div id="countdown" class="hidden"></div>
+      <div id="toast" class="hidden"></div>
+
+      <section id="results" class="hidden">
+        <header>
+          <h2>Flight report</h2>
+          <div class="res-actions">
+            <button id="replay">Replay</button>
+            <button id="closeResults">Close</button>
+          </div>
+        </header>
+        <div id="resSummary" class="res-summary"></div>
+        <div class="res-tabs" id="resTabs">
+          <button data-chart="alt" class="active">Altitude</button>
+          <button data-chart="vel">Velocity</button>
+          <button data-chart="acc">Acceleration</button>
+          <button data-chart="thrust">Thrust &amp; mass</button>
+          <button data-chart="aoa">Angle of attack &amp; Mach</button>
+          <button data-chart="track">Ground track</button>
+        </div>
+        <canvas id="resChart"></canvas>
+        <div id="resEvents" class="res-events"></div>
+        <div id="resWarnings" class="res-warnings"></div>
+      </section>
+
+      <div id="dropHint" class="hidden"><div>Drop an <b>.stl</b> rocket or an <b>.eng</b> motor file</div></div>
+      <div id="loading" class="hidden">Analyzing rocket…</div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

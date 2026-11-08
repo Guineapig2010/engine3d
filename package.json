@@ -1,0 +1,22 @@
+{
+  "name": "rocket-flight-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "3D model-rocket flight simulator: load any STL, pick real A-F motors, launch from a detailed pad and controller.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test test/*.test.mjs",
+    "build:motors": "node tools/build-motors.mjs",
+    "build:examples": "node tools/gen-examples.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "vite": "^7.3.7"
+  }
+}
