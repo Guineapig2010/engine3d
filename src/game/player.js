@@ -18,6 +18,7 @@ export class Player {
     this.baseFov = 60;
     this.zoom = 1; // 1 = normal, up to 8× binoculars
     this.binoHeld = false;
+    this.lastManualLook = -1e9;
     this.bob = 0;
     this.vel = new THREE.Vector3();
     this.colliders = []; // { x, z, r }
@@ -79,6 +80,7 @@ export class Player {
   }
 
   turn(dx, dy) {
+    if (Math.abs(dx) + Math.abs(dy) > 2) this.lastManualLook = performance.now();
     const s = 0.0022 / Math.sqrt(this.currentZoom());
     this.yaw -= dx * s;
     this.pitch = THREE.MathUtils.clamp(this.pitch - dy * s, -1.45, 1.52);

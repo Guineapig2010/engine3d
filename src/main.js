@@ -1171,7 +1171,8 @@ class App {
     const r = V(1, 0, 0).applyQuaternion(cam.quaternion);
     const u = V(0, 1, 0).applyQuaternion(cam.quaternion);
     const inspect = g.controller === 'inspect';
-    const p = cam.position.clone().addScaledVector(f, inspect ? 0.27 : 0.32).addScaledVector(r, inspect ? -0.01 : -0.05).addScaledVector(u, inspect ? -0.035 : -0.2);
+    const watching = !inspect && this.flight && !this.flight.done;
+    const p = cam.position.clone().addScaledVector(f, inspect ? 0.27 : 0.32).addScaledVector(r, inspect ? -0.01 : -0.05).addScaledVector(u, inspect ? -0.035 : watching ? -0.3 : -0.2);
     c.position.copy(p);
     const q = cam.quaternion.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(inspect ? 1.05 : 0.8, Math.PI, inspect ? 0 : -0.12)));
     c.quaternion.copy(q);
@@ -1288,6 +1289,14 @@ class App {
     this.g.clipOn = [null, null];
     this.g.rocketAt = 'flight';
     this.g.recovered = false;
+    // look up! drop the controller to your side and lock your view onto the rocket
+    if (this.closeup.active) this.leaveCloseup();
+    if (this.g.controller === 'inspect') this.g.controller = 'hand';
+    if (this.view === 'eyes') {
+      this.track = true;
+      this.player.lookAt(this.tailOnPad().add(V(0, this.geom.length * 0.6, 0)));
+      this.player.zoom = 1;
+    }
     $('#hud').classList.remove('hidden');
     this.hudChart.set({ series: [{ name: 'Altitude', color: '#ff6a1f', unit: 'm', points: sim.samples.map((s) => [s.t, s.alt]) }], yLabel: 'Alt (m)' });
     this.renderResults();
@@ -1596,8 +1605,9 @@ class App {
     const inCloseupCam = this.closeup.active && this.closeup.active.cam;
     if (this.view === 'eyes') {
       if (!inCloseupCam) {
-        if (this.track && this.flight && !this.closeup.active) {
-          this.player.steerToward(target, dt, 5);
+        // track assist; if you move the mouse it lets go for a moment so you can look around
+        if (this.track && this.flight && !this.closeup.active && performance.now() - this.player.lastManualLook > 900) {
+          this.player.steerToward(target, dt, this.playT < 1.5 ? 12 : 6);
           // keep the rocket a visible size: zoom like a spotter with binoculars
           const dist = this.player.eyePos().distanceTo(target);
           const want = THREE.MathUtils.clamp((dist * 0.035) / Math.max(0.05, this.geom.length), 1, 10);
