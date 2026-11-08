@@ -173,3 +173,12 @@ test('E-motor high-altitude rocket goes much higher', () => {
   assert.ok(r.summary.apogee > 450 && r.summary.apogee < 900, `apogee ${r.summary.apogee}`);
   assert.ok(r.summary.maxMach < 0.8);
 });
+
+test('fin angular positions are found (used to roll the rocket so the rod clears the fins)', () => {
+  const g = analyzeRocket(loadStlPositions('public/examples/sparrow-c.stl'), {});
+  const f = g.finSets[0];
+  assert.equal(f.angles.length, 3);
+  const a = f.angles.map((x) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)).sort((p, q) => p - q);
+  const gaps = [a[1] - a[0], a[2] - a[1], 2 * Math.PI - a[2] + a[0]];
+  for (const gp of gaps) assert.ok(Math.abs(gp - (2 * Math.PI) / 3) < 0.15, `gap ${gp}`);
+});

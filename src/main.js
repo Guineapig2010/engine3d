@@ -899,7 +899,7 @@ class App {
 
     // ---- events (sounds & effects) ----
     for (const ev of F.events) {
-      if (ev.t > prevT && ev.t <= t && !F.firedEvents.has(ev)) {
+      if ((ev.t > prevT || (ev.t === 0 && prevT === 0)) && ev.t <= t && !F.firedEvents.has(ev)) {
         F.firedEvents.add(ev);
         this.onEvent(ev, s);
       }
