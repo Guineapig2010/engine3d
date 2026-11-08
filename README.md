@@ -73,18 +73,53 @@ ejection charge fires at burnout + delay. `-0` booster motors fire straight
 through into the next stage (direct staging); a booster with a delay, or a
 composite motor, **won't** light the upper stage — just like real life.
 
-### The launch pad and controller
-* Tripod pad in the style of the Estes Porta-Pad: three plastic legs with ribs and
-  feet, centre hub, tilt bracket with wing nut, sooty steel blast deflector, 1/8"
-  two-piece launch rod with joint sleeve (or 3/16" / 1/4" rods), orange rod cap.
-* Hand-held controller in the style of the Estes Electron Beam: safety key,
-  continuity lamp, big red launch button, label panel, battery door, a 15 ft lead
-  with red/black micro-clips that clip onto the igniter wires in the nozzle.
-* **Launch sequence** (click the 3-D parts or use the checklist): load the rocket →
-  remove rod cap → attach micro-clips → walk back 15 ft → insert safety key
-  (continuity light comes on) → "range is clear" → 5-4-3-2-1 → **press and hold
-  LAUNCH** until the igniter heats and the motor lights (let go too early and it
-  cools off) → flight → remove the safety key → recover the rocket.
+### Play it like a real launch (first person)
+You walk around the range yourself; nothing is locked into a sequence. The
+checklist on the right only reminds you of the real procedure.
+
+| Control | Action |
+|---|---|
+| `W A S D` / arrows, `Shift` | walk / run |
+| click the view, mouse | look around (`Esc` frees the cursor; drag to look if your browser blocks pointer lock) |
+| `E` | interact with what you're looking at / finish a close-up |
+| mouse wheel, `Z` (hold) | zoom like binoculars |
+| `T` | track assist: your view follows the rocket |
+| `V` | cycle cameras: your eyes, chase, onboard, orbit |
+| `C` | 5-4-3-2-1 countdown |
+| holding the controller: right mouse or `K` | push and hold the safety key down |
+| holding the controller: left mouse or `Space` | press and hold LAUNCH |
+| `G` | put the controller down |
+| `Tab` | show/hide the setup panel |
+
+The procedure follows the Estes instructions:
+1. **Prep table**: drag the Estes-style starter into the nozzle until it touches
+   the propellant, push the plastic plug in to hold it, then click the leads to
+   bend them apart.
+2. Take the orange **safety cap** off the rod, pick the rocket up (separate
+   stage parts are stacked in your hands) and slide it onto the rod.
+3. At the pad, **drag each micro-clip onto a starter lead**, one per lead. The
+   game blocks this if the safety key is in the controller.
+4. Walk back the 17 ft (5.2 m) lead and **pick up the Electron Beam-style
+   controller**: drag the key into the slot, push and hold it down (the LED lights
+   only with good continuity), and while still holding the key press and hold
+   LAUNCH. The LED goes out while current flows; the starter heats for about a
+   second, then the motor lights. Let go too early and it cools off. With
+   real-world variability on, the occasional starter misfires and has to be
+   replaced.
+5. Watch the flight from the ground with free look and zoom, take the key out,
+   then walk to where it landed and press `E` to recover it.
+
+The launch pad is modelled on the Estes Porta-Pad: tripod legs, tilt bracket
+with wing nut, sooty blast deflector, two-piece 1/8" rod and rod cap.
+
+### Smoke
+Smoke puffs are laid down along the path the nozzle actually travels, so a fast
+rocket leaves an unbroken trail. Each puff is pushed out by the exhaust, then
+drifts with the wind (stronger with height), expands fast at first and then
+keeps spreading, and thins out over 30 s or more. Black powder leaves a thick
+grey-white trail and a thinner tracking-smoke trail during the delay. White
+Lightning is dense white, Blue Thunder makes very little smoke, and Black Jack
+is dark and sooty. At ignition a cloud rolls out across the blast deflector.
 
 ### Physics
 * 3-D rigid body, RK4 integration (1 ms steps under power): thrust, gravity

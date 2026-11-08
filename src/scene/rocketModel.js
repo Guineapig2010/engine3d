@@ -76,10 +76,14 @@ function flameTexture() {
 }
 
 export const PROPELLANT_LOOK = {
-  'Black powder': { flame: 0xffa040, smoke: [0.86, 0.86, 0.84], smokeRate: 1.0, delaySmoke: 0.5, sparks: true },
-  'Composite (White Lightning)': { flame: 0xfff3c0, smoke: [0.97, 0.97, 0.97], smokeRate: 1.4, delaySmoke: 0.35, sparks: false },
-  'Composite (Blue Thunder)': { flame: 0xb8c8ff, smoke: [0.8, 0.82, 0.86], smokeRate: 0.35, delaySmoke: 0.3, sparks: false },
-  'Composite (Black Jack/fast)': { flame: 0xff7a30, smoke: [0.25, 0.24, 0.23], smokeRate: 1.5, delaySmoke: 0.4, sparks: true },
+  // black powder: dense grey-white smoke, orange flame, sparks, tracking smoke during the delay
+  'Black powder': { flame: 0xffa040, smoke: [0.84, 0.84, 0.82], smokeRate: 1.0, smokeSize: 1.0, delaySmoke: 0.7, sparks: true },
+  // White Lightning: very dense bright-white smoke
+  'Composite (White Lightning)': { flame: 0xfff3c0, smoke: [0.97, 0.97, 0.96], smokeRate: 1.35, smokeSize: 1.25, delaySmoke: 0.45, sparks: false },
+  // Blue Thunder: bright violet-white flame, very little smoke
+  'Composite (Blue Thunder)': { flame: 0xb8c8ff, smoke: [0.82, 0.83, 0.86], smokeRate: 0.3, smokeSize: 0.7, delaySmoke: 0.35, sparks: false },
+  // Black Jack: dark sooty smoke and an orange flame
+  'Composite (Black Jack/fast)': { flame: 0xff7a30, smoke: [0.24, 0.23, 0.22], smokeRate: 1.45, smokeSize: 1.15, delaySmoke: 0.5, sparks: true },
 };
 export function propellantLook(p) {
   return PROPELLANT_LOOK[p] || PROPELLANT_LOOK['Black powder'];
@@ -238,51 +242,9 @@ export class RocketModel {
     return { group: g, flame, outer, inner, glow, md, r, len, look };
   }
 
+  /** The starter goes into the first motor of the bottom stage (main.js manages it). */
   buildIgniter() {
-    if (this.igniter) this.igniter.parent?.remove(this.igniter);
-    const m0 = this.sections[0]?.motors[0];
-    if (!m0) return;
-    const ig = new THREE.Group();
-    const plug = new THREE.Mesh(new THREE.CylinderGeometry(m0.r * 0.42, m0.r * 0.3, 0.006, 12), new THREE.MeshStandardMaterial({ color: 0xff6a00, roughness: 0.5 }));
-    plug.position.y = -0.002;
-    ig.add(plug);
-    const copper = new THREE.MeshStandardMaterial({ color: 0xc77b3a, metalness: 1, roughness: 0.35 });
-    this.igniterWires = [];
-    for (const s of [-1, 1]) {
-      const curve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(s * 0.0012, 0.002, 0),
-        new THREE.Vector3(s * 0.002, -0.002, 0),
-        new THREE.Vector3(s * 0.012, -0.0045, 0.006),
-        new THREE.Vector3(s * 0.026, -0.0035, 0.016),
-      ]);
-      const w = new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.00045, 5), copper);
-      ig.add(w);
-      this.igniterWires.push(curve);
-    }
-    // pyrogen tip glow (visible when heating)
-    this.igniterGlow = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 10, 8), new THREE.MeshBasicMaterial({ color: 0x220000 }));
-    this.igniterGlow.position.y = 0.004;
-    ig.add(this.igniterGlow);
-    m0.group.add(ig);
-    this.igniter = ig;
-    this.igniterMotor = m0;
-  }
-
-  /** World positions of the two igniter lead ends (where the micro-clips bite). */
-  igniterLeadEnds() {
-    this.updateAttached();
-    if (!this.igniter) return null;
-    this.igniter.updateMatrixWorld(true);
-    return this.igniterWires.map((c) => this.igniter.localToWorld(c.getPoint(1).clone()));
-  }
-
-  setIgniterHeat(h) {
-    if (!this.igniterGlow) return;
-    this.igniterGlow.material.color.setRGB(0.15 + h * 1.2, 0.02 + h * 0.6, h * 0.15);
-  }
-
-  setIgniterVisible(v) {
-    if (this.igniter) this.igniter.visible = v;
+    this.igniterMotor = this.sections[0]?.motors[0] || null;
   }
 
   buildMarkers() {

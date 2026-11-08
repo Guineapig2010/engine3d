@@ -372,13 +372,14 @@ export class Panel {
       <div class="section"><h3>Prediction</h3><div id="liveStats"></div></div>`;
     $('#rod').addEventListener('change', (e) => {
       L.rod = e.target.value;
-      app.configChanged(true);
+      app.padChanged();
     });
     const slider = (id, key, out, f) =>
       $(id).addEventListener('input', (e) => {
         L[key] = +e.target.value;
         $(out).textContent = f(L[key]);
-        app.configChanged(key === 'angle' || key === 'azimuth');
+        if (key === 'angle' || key === 'azimuth') app.padChanged();
+        else app.configChanged();
       });
     slider('#angle', 'angle', '#angleV', (v) => v + '°');
     slider('#azimuth', 'azimuth', '#azV', compass);

@@ -1,49 +1,47 @@
-// Hand-held launch controller modelled on the Estes "Electron Beam" style:
-// 4×AA battery handset with a removable safety key, continuity lamp, big red
-// LAUNCH push-button and a 15 ft lead ending in two micro-clips.
+// Hand-held launch controller modelled on the current Estes "Electron Beam":
+// red moulded handset, 4×AA, LED continuity light, spring-loaded safety key that
+// only closes the circuit while it is PUSHED DOWN and HELD, a big push-button and
+// a 17 ft (5.2 m) lead ending in two micro-clips.
+//
+// Real procedure (Estes): hook up with the key in your pocket → walk back the
+// length of the cord → insert the key and push it down hard: the LED lights →
+// while holding the key down firmly, press and hold LAUNCH until liftoff (the
+// LED goes out while current flows to the igniter) → remove the key.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
+export const CORD_LENGTH = 5.2; // m (17 ft)
+
 function labelTexture() {
   const c = document.createElement('canvas');
-  c.width = 512;
-  c.height = 1100;
+  c.width = 400;
+  c.height = 1000;
   const g = c.getContext('2d');
-  g.fillStyle = '#16181b';
+  g.fillStyle = '#121214';
   g.fillRect(0, 0, c.width, c.height);
-  g.fillStyle = '#ffc928';
-  g.fillRect(0, 0, c.width, 120);
-  g.fillStyle = '#111';
-  g.font = 'bold 54px Arial, sans-serif';
+  g.strokeStyle = '#d8d8d8';
+  g.lineWidth = 4;
+  g.strokeRect(14, 14, c.width - 28, c.height - 28);
   g.textAlign = 'center';
-  g.fillText('LAUNCH', 256, 58);
-  g.font = 'bold 40px Arial, sans-serif';
-  g.fillText('CONTROLLER', 256, 104);
-  g.fillStyle = '#fff';
-  g.font = 'bold 34px Arial, sans-serif';
-  g.fillText('SAFETY KEY', 256, 175);
-  g.font = '24px Arial, sans-serif';
-  g.fillStyle = '#ffc928';
-  g.fillText('INSERT TO ARM', 256, 395);
-  g.fillStyle = '#fff';
+  g.fillStyle = '#f2f2f2';
   g.font = 'bold 30px Arial, sans-serif';
-  g.fillText('CONTINUITY', 256, 450);
-  g.fillStyle = '#ff4b3a';
-  g.font = 'bold 44px Arial, sans-serif';
-  g.fillText('LAUNCH', 256, 640);
-  g.fillStyle = '#ccc';
-  g.font = '22px Arial, sans-serif';
-  g.fillText('PRESS AND HOLD', 256, 960);
-  g.fillStyle = '#ffc928';
-  g.font = 'bold 22px Arial, sans-serif';
-  g.fillText('⚠ REMOVE KEY WHEN NOT LAUNCHING', 256, 1010);
-  g.fillStyle = '#888';
+  g.fillText('SAFETY KEY', 200, 70);
   g.font = '20px Arial, sans-serif';
-  g.fillText('6 V · 4 × AA · 15 FT LEAD', 256, 1055);
-  // border
-  g.strokeStyle = '#ffc928';
-  g.lineWidth = 6;
-  g.strokeRect(10, 130, c.width - 20, c.height - 140);
+  g.fillStyle = '#bdbdbd';
+  g.fillText('INSERT · PUSH DOWN · HOLD', 200, 300);
+  g.fillStyle = '#f2f2f2';
+  g.font = 'bold 26px Arial, sans-serif';
+  g.fillText('CONTINUITY', 200, 352);
+  g.font = 'bold 40px Arial, sans-serif';
+  g.fillStyle = '#ffffff';
+  g.fillText('LAUNCH', 200, 520);
+  g.font = 'bold 22px Arial, sans-serif';
+  g.fillStyle = '#ffcc33';
+  g.fillText('⚠ REMOVE KEY', 200, 900);
+  g.fillText('WHEN NOT LAUNCHING', 200, 930);
+  g.fillStyle = '#9a9a9a';
+  g.font = '18px Arial, sans-serif';
+  g.fillText('6 V · 4 × AA', 200, 965);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
@@ -54,151 +52,162 @@ export class LaunchController {
   constructor() {
     this.group = new THREE.Group();
     this.group.name = 'LaunchController';
-    const W = 0.068;
-    const T = 0.036;
-    const Lh = 0.17;
+    const W = 0.062;
+    const T = 0.034;
+    const Lh = 0.165;
     this.size = { W, T, L: Lh };
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x22252a, roughness: 0.55, metalness: 0.05 });
-    const gripMat = new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.85 });
-    const chrome = new THREE.MeshStandardMaterial({ color: 0xe6e6e6, roughness: 0.15, metalness: 1 });
+    const red = new THREE.MeshStandardMaterial({ color: 0xc8191e, roughness: 0.42, metalness: 0.02 });
+    const darkRed = new THREE.MeshStandardMaterial({ color: 0x8e0f13, roughness: 0.6 });
+    const black = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.55 });
+    const chrome = new THREE.MeshStandardMaterial({ color: 0xe2e4e6, roughness: 0.18, metalness: 1 });
 
-    const body = new THREE.Mesh(new RoundedBoxGeometry(W, T, Lh, 4, 0.012), bodyMat);
-    body.castShadow = true;
-    body.receiveShadow = true;
-    this.group.add(body);
-    this.body = body;
-    // grip ridges on the sides of the handle end
-    for (let i = 0; i < 9; i++) {
-      for (const s of [-1, 1]) {
-        const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.003, T * 0.7, 0.004), gripMat);
-        ridge.position.set(s * (W / 2 + 0.0005), 0, 0.02 + i * 0.0068);
-        this.group.add(ridge);
-      }
+    // moulded two-piece shell with a parting line and a slimmer grip end
+    const top = new THREE.Mesh(new RoundedBoxGeometry(W, T * 0.55, Lh, 5, 0.012), red);
+    top.position.y = T * 0.22;
+    const bottom = new THREE.Mesh(new RoundedBoxGeometry(W * 0.98, T * 0.5, Lh * 0.99, 5, 0.012), red);
+    bottom.position.y = -T * 0.22;
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(W * 1.002, 0.0012, Lh * 0.96), darkRed);
+    for (const m of [top, bottom]) {
+      m.castShadow = true;
+      m.receiveShadow = true;
     }
-    // label panel on top
-    const label = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.86, Lh * 0.9), new THREE.MeshStandardMaterial({ map: labelTexture(), roughness: 0.6 }));
-    label.rotation.x = -Math.PI / 2;
-    label.position.y = T / 2 + 0.0004;
+    this.group.add(top, bottom, seam);
+    this.body = top;
+    // finger grooves on the underside
+    for (let i = 0; i < 4; i++) {
+      const groove = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, W * 0.9, 12), darkRed);
+      groove.rotation.z = Math.PI / 2;
+      groove.position.set(0, -T * 0.47, -0.03 + i * 0.019);
+      this.group.add(groove);
+    }
+    // label panel (top face). Texture top faces +z (the cord / pad end).
+    const label = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.8, Lh * 0.82), new THREE.MeshStandardMaterial({ map: labelTexture(), roughness: 0.5 }));
+    label.rotation.set(-Math.PI / 2, 0, Math.PI);
+    label.position.y = T * 0.5 + 0.0004;
     this.group.add(label);
-    // battery door seam & screws on the bottom
-    const door = new THREE.Mesh(new THREE.BoxGeometry(W * 0.7, 0.001, Lh * 0.5), gripMat);
-    door.position.set(0, -T / 2 - 0.0003, 0.02);
+    const zAt = (py) => Lh * 0.41 - (py / 1000) * Lh * 0.82;
+    const topY = T * 0.5;
+
+    // battery door + screws underneath
+    const door = new THREE.Mesh(new THREE.BoxGeometry(W * 0.7, 0.001, Lh * 0.42), darkRed);
+    door.position.set(0, -T * 0.49, -0.035);
     this.group.add(door);
-    for (const [x, z] of [[-0.025, -0.07], [0.025, -0.07], [-0.025, 0.07], [0.025, 0.07]]) {
-      const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0022, 0.001, 10), chrome);
-      screw.position.set(x, -T / 2 - 0.0005, z);
+    for (const [x, z] of [[-0.022, -0.07], [0.022, -0.07], [-0.022, 0.07], [0.022, 0.07]]) {
+      const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.001, 10), chrome);
+      screw.position.set(x, -T * 0.5, z);
       this.group.add(screw);
     }
 
-    // label layout maps texture y → z on the top face
-    const zAt = (py) => -Lh * 0.45 + (py / 1100) * Lh * 0.9;
-
-    // ---- safety key slot ----
-    const slotZ = zAt(280);
-    const bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.004, 24), chrome);
-    bezel.position.set(0, T / 2 + 0.002, slotZ);
-    this.group.add(bezel);
-    const slot = new THREE.Mesh(new THREE.BoxGeometry(0.0045, 0.0045, 0.0022), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-    slot.position.set(0, T / 2 + 0.0041, slotZ);
+    // ---- safety-key slot (chrome escutcheon with a narrow slot) ----
+    const slotZ = zAt(170);
+    const esc = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.0095, 0.003, 28), chrome);
+    esc.position.set(0, topY + 0.0015, slotZ);
+    this.group.add(esc);
+    const slot = new THREE.Mesh(new THREE.BoxGeometry(0.0058, 0.002, 0.0022), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    slot.position.set(0, topY + 0.0031, slotZ);
     this.group.add(slot);
-    this.slotPos = new THREE.Vector3(0, T / 2 + 0.004, slotZ);
+    this.slotLocal = new THREE.Vector3(0, topY + 0.003, slotZ);
 
-    // ---- key ----
+    // ---- safety key: flat steel key with a black grip and a ring ----
     const key = new THREE.Group();
-    const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.026, 0.002), chrome);
-    shaft.position.y = -0.008;
-    const notch = new THREE.Mesh(new THREE.BoxGeometry(0.0015, 0.006, 0.0021), new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 1, roughness: 0.3 }));
-    notch.position.set(0.0015, -0.016, 0);
-    const keyGrip = new THREE.Mesh(new RoundedBoxGeometry(0.02, 0.018, 0.006, 3, 0.003), new THREE.MeshStandardMaterial({ color: 0xd61e1e, roughness: 0.4 }));
-    keyGrip.position.y = 0.012;
-    const hole = new THREE.Mesh(new THREE.TorusGeometry(0.0032, 0.0012, 8, 16), chrome);
-    hole.position.y = 0.017;
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.009, 0.0007, 6, 24), chrome);
-    ring.position.set(0, 0.026, 0);
-    ring.rotation.y = Math.PI / 2;
-    key.add(shaft, notch, keyGrip, hole, ring);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.0055, 0.024, 0.0018), chrome);
+    blade.position.y = -0.006;
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.0035, 0.004, 0.0018), chrome);
+    tip.position.y = -0.0195;
+    const grip = new THREE.Mesh(new RoundedBoxGeometry(0.019, 0.016, 0.006, 3, 0.0028), black);
+    grip.position.y = 0.0125;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.0075, 0.0009, 6, 24), chrome);
+    ring.position.y = 0.026;
+    key.add(blade, tip, grip, ring);
     key.traverse((o) => (o.castShadow = true));
     this.key = key;
+    this.keyGrip = grip;
     this.group.add(key);
-    // resting pose: lying on the grass beside the controller
-    this.keyOut = { pos: new THREE.Vector3(W / 2 + 0.03, -T / 2 + 0.004, slotZ - 0.01), rot: new THREE.Euler(-Math.PI / 2, 0, 0.4) };
-    this.keyIn = { pos: new THREE.Vector3(0, T / 2 + 0.017, slotZ), rot: new THREE.Euler(0, 0, 0) };
-    this.keyT = 0;
-    this.keyTarget = 0;
-    this.applyKey();
+    // positions: in the slot (resting, not making contact) and pushed down (contact)
+    this.keyUp = new THREE.Vector3(0, topY + 0.0215, slotZ);
+    this.keyDownPos = new THREE.Vector3(0, topY + 0.0155, slotZ);
+    this.keyHand = new THREE.Vector3(W / 2 + 0.05, 0.01, slotZ + 0.01); // held in your other hand
+    this.keyState = 'out'; // 'out' | 'in'
+    this.keyPushed = false;
+    this.keyPress = 0;
 
-    // ---- continuity lamp ----
-    const lampZ = zAt(520);
-    const lampBezel = new THREE.Mesh(new THREE.CylinderGeometry(0.0085, 0.0095, 0.004, 24), chrome);
-    lampBezel.position.set(0, T / 2 + 0.002, lampZ);
-    this.group.add(lampBezel);
-    this.lampMat = new THREE.MeshStandardMaterial({ color: 0x661010, roughness: 0.1, transparent: true, opacity: 0.85, emissive: 0x000000, emissiveIntensity: 3 });
-    const lens = new THREE.Mesh(new THREE.SphereGeometry(0.0068, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), this.lampMat);
-    lens.position.set(0, T / 2 + 0.004, lampZ);
-    this.group.add(lens);
-    const filament = new THREE.Mesh(new THREE.TorusGeometry(0.0018, 0.0003, 4, 10), new THREE.MeshBasicMaterial({ color: 0x553300 }));
-    filament.position.set(0, T / 2 + 0.0065, lampZ);
-    this.filament = filament;
-    this.group.add(filament);
-    this.lampLight = new THREE.PointLight(0xff3020, 0, 0.25, 2);
-    this.lampLight.position.set(0, T / 2 + 0.012, lampZ);
-    this.group.add(this.lampLight);
+    // ---- continuity LED in a chrome bezel ----
+    const ledZ = zAt(390);
+    const bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.006, 0.003, 20), chrome);
+    bezel.position.set(0, topY + 0.0015, ledZ);
+    this.group.add(bezel);
+    this.ledMat = new THREE.MeshStandardMaterial({ color: 0x5a0b0b, roughness: 0.15, emissive: 0xff1a10, emissiveIntensity: 0, transparent: true, opacity: 0.92 });
+    const led = new THREE.Mesh(new THREE.SphereGeometry(0.0034, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), this.ledMat);
+    led.position.set(0, topY + 0.003, ledZ);
+    this.group.add(led);
+    this.ledLight = new THREE.PointLight(0xff2010, 0, 0.3, 2);
+    this.ledLight.position.set(0, topY + 0.012, ledZ);
+    this.group.add(this.ledLight);
 
-    // ---- launch button ----
-    const btnZ = zAt(790);
-    const guard = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.02, 0.006, 32), gripMat);
-    guard.position.set(0, T / 2 + 0.003, btnZ);
-    this.group.add(guard);
-    const btnMat = new THREE.MeshStandardMaterial({ color: 0xe0201b, roughness: 0.35 });
-    const button = new THREE.Mesh(new THREE.CylinderGeometry(0.0145, 0.015, 0.01, 32), btnMat);
-    button.position.set(0, T / 2 + 0.008, btnZ);
+    // ---- launch push-button: large dark button in a raised collar ----
+    const btnZ = zAt(660);
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.0175, 0.019, 0.006, 32), black);
+    collar.position.set(0, topY + 0.003, btnZ);
+    this.group.add(collar);
+    const btnMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2c, roughness: 0.35 });
+    const button = new THREE.Mesh(new THREE.CylinderGeometry(0.0138, 0.0142, 0.009, 32), btnMat);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.0138, 28, 8, 0, Math.PI * 2, 0, Math.PI * 0.16), btnMat);
+    cap.position.y = -0.0085;
+    cap.scale.y = 1.6;
+    button.add(cap);
+    button.position.set(0, topY + 0.0075, btnZ);
     button.castShadow = true;
-    const btnTop = new THREE.Mesh(new THREE.SphereGeometry(0.0145, 24, 8, 0, Math.PI * 2, 0, Math.PI * 0.18), btnMat);
-    btnTop.position.y = -0.008;
-    btnTop.scale.y = 1.4;
-    button.add(btnTop);
     this.button = button;
     this.buttonUpY = button.position.y;
     this.group.add(button);
 
-    // ---- cord exit / strain relief ----
-    const relief = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.007, 0.022, 12), gripMat);
+    // ---- cord strain relief at the +z end ----
+    const relief = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0065, 0.024, 12), black);
     relief.rotation.x = Math.PI / 2;
-    relief.position.set(0, -0.004, Lh / 2 + 0.008);
+    relief.position.set(0, -0.002, Lh / 2 + 0.01);
     this.group.add(relief);
-    this.cordExitLocal = new THREE.Vector3(0, -0.004, Lh / 2 + 0.02);
+    this.cordExitLocal = new THREE.Vector3(0, -0.002, Lh / 2 + 0.022);
 
-    this.lampOn = false;
+    this.ledOn = false;
     this.pressed = false;
+    this.held = false;
+    this.applyKey();
   }
 
   cordExitWorld() {
+    this.group.updateMatrixWorld(true);
     return this.group.localToWorld(this.cordExitLocal.clone());
   }
 
-  setKey(inserted) {
-    this.keyTarget = inserted ? 1 : 0;
+  slotWorld() {
+    this.group.updateMatrixWorld(true);
+    return this.group.localToWorld(this.slotLocal.clone());
+  }
+
+  setKeyState(s) {
+    this.keyState = s;
+    if (s === 'out') this.keyPushed = false;
+    this.applyKey();
+  }
+
+  setKeyPushed(p) {
+    this.keyPushed = this.keyState === 'in' && p;
   }
 
   applyKey() {
-    const k = this.keyT;
-    const e = k * k * (3 - 2 * k);
-    // arc from the grass up and into the slot
-    this.key.position.lerpVectors(this.keyOut.pos, this.keyIn.pos, e);
-    this.key.position.y += Math.sin(e * Math.PI) * 0.05;
-    this.key.rotation.set(
-      THREE.MathUtils.lerp(this.keyOut.rot.x, this.keyIn.rot.x, e),
-      THREE.MathUtils.lerp(0, Math.PI / 2, Math.max(0, (e - 0.85) / 0.15)), // final quarter-turn
-      THREE.MathUtils.lerp(this.keyOut.rot.z, this.keyIn.rot.z, e)
-    );
+    if (this.dragging) return;
+    if (this.keyState === 'in') {
+      this.key.position.lerpVectors(this.keyUp, this.keyDownPos, this.keyPress);
+      this.key.rotation.set(0, 0, 0);
+    } else {
+      this.key.position.copy(this.keyHand);
+      this.key.rotation.set(0.2, 0.6, -0.5);
+    }
+    this.key.visible = this.keyState === 'in' || this.held;
   }
 
-  keyInserted() {
-    return this.keyT >= 0.999;
-  }
-
-  setLamp(on) {
-    this.lampOn = on;
+  setLed(on) {
+    this.ledOn = on;
   }
 
   setPressed(p) {
@@ -206,48 +215,50 @@ export class LaunchController {
   }
 
   update(dt, time) {
-    if (this.keyT !== this.keyTarget) {
-      const s = Math.sign(this.keyTarget - this.keyT);
-      this.keyT = Math.max(0, Math.min(1, this.keyT + s * dt * 1.6));
-      this.applyKey();
-    }
-    const flicker = this.lampOn ? 0.92 + 0.08 * Math.sin(time * 60) : 0;
-    this.lampMat.emissive.setRGB(this.lampOn ? 1 : 0, this.lampOn ? 0.18 : 0, this.lampOn ? 0.08 : 0);
-    this.lampMat.emissiveIntensity = 2.5 * flicker;
-    this.lampLight.intensity = this.lampOn ? 0.05 * flicker : 0;
-    this.filament.material.color.setHex(this.lampOn ? 0xffd27a : 0x553300);
-    const target = this.pressed ? this.buttonUpY - 0.0035 : this.buttonUpY;
-    this.button.position.y += (target - this.button.position.y) * Math.min(1, dt * 30);
+    const target = this.keyPushed ? 1 : 0;
+    this.keyPress += (target - this.keyPress) * Math.min(1, dt * 25);
+    this.applyKey();
+    const glow = this.ledOn ? 0.9 + 0.1 * Math.sin(time * 40) : 0;
+    this.ledMat.emissiveIntensity = 6 * glow;
+    this.ledMat.color.setHex(this.ledOn ? 0xff3a2a : 0x5a0b0b);
+    this.ledLight.intensity = 0.06 * glow;
+    const bt = this.pressed ? this.buttonUpY - 0.004 : this.buttonUpY;
+    this.button.position.y += (bt - this.button.position.y) * Math.min(1, dt * 30);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Micro-clip (small alligator clip) and the launch lead.
+// Micro-clip (small alligator clip) and the 2-conductor launch lead.
 // ---------------------------------------------------------------------------
 function microClip(color) {
   const g = new THREE.Group();
-  const steel = new THREE.MeshStandardMaterial({ color: 0xcfd2d6, metalness: 1, roughness: 0.25 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0xcfd2d6, metalness: 1, roughness: 0.28 });
+  // jaws point along −z (toward what they bite)
   for (const s of [-1, 1]) {
-    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.0016, 0.024), steel);
-    jaw.position.set(0, s * 0.0018, -0.004);
-    jaw.rotation.x = s * 0.08;
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.0042, 0.0012, 0.022), steel);
+    jaw.position.set(0, s * 0.0016, -0.006);
+    jaw.rotation.x = -s * 0.07;
     g.add(jaw);
-    // teeth
-    for (let i = 0; i < 4; i++) {
-      const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.0008, 0.001), steel);
-      tooth.position.set(0, s * 0.0008, -0.013 + i * 0.002);
+    for (let i = 0; i < 5; i++) {
+      const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.0042, 0.0007, 0.0008), steel);
+      tooth.position.set(0, s * 0.0008, -0.015 + i * 0.0018);
       g.add(tooth);
     }
+    const lever = new THREE.Mesh(new THREE.BoxGeometry(0.0044, 0.0011, 0.01), steel);
+    lever.position.set(0, s * 0.0034, 0.009);
+    lever.rotation.x = s * 0.35;
+    g.add(lever);
   }
-  const spring = new THREE.Mesh(new THREE.TorusGeometry(0.0022, 0.0006, 6, 12), steel);
+  const spring = new THREE.Mesh(new THREE.TorusGeometry(0.0021, 0.0006, 6, 12), steel);
   spring.rotation.y = Math.PI / 2;
-  spring.position.z = 0.003;
+  spring.position.z = 0.004;
   g.add(spring);
-  const boot = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0035, 0.012, 10), new THREE.MeshStandardMaterial({ color, roughness: 0.6 }));
-  boot.rotation.x = Math.PI / 2;
-  boot.position.z = 0.012;
-  g.add(boot);
+  const crimp = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0018, 0.006, 8), new THREE.MeshStandardMaterial({ color, roughness: 0.55 }));
+  crimp.rotation.x = Math.PI / 2;
+  crimp.position.z = 0.016;
+  g.add(crimp);
   g.traverse((o) => (o.castShadow = true));
+  g.userData.wireLocal = new THREE.Vector3(0, 0, 0.019);
   return g;
 }
 
@@ -256,34 +267,32 @@ export class LaunchLead {
     this.scene = scene;
     this.group = new THREE.Group();
     scene.add(this.group);
-    this.clips = [microClip(0xc81d1d), microClip(0x1d1d1d)];
+    this.clips = [microClip(0xb01818), microClip(0x1a1a1a)];
     for (const c of this.clips) this.group.add(c);
-    this.cableMat = new THREE.MeshStandardMaterial({ color: 0x8a1e1e, roughness: 0.7 });
+    this.cableMat = new THREE.MeshStandardMaterial({ color: 0x7a1717, roughness: 0.7 });
     this.leadMats = [new THREE.MeshStandardMaterial({ color: 0xb01818, roughness: 0.6 }), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 })];
     this.meshes = [];
-    this.attachT = 0;
-    this.attachTarget = 0;
+    this.dirty = true;
   }
 
-  /** start: controller cord exit, parked: [p,p] clip rest positions, attached: [p,p] at the igniter leads. */
-  configure({ start, junction, parked, attached }) {
-    this.start = start;
-    this.junction = junction;
-    this.parked = parked;
-    this.attached = attached;
-    this.rebuild();
+  /** start: controller cord exit (world); junction: where the twin lead splits near the pad. */
+  setEnds(start, junction) {
+    this.start = start.clone();
+    this.junction = junction.clone();
+    this.dirty = true;
   }
 
-  setAttached(on) {
-    this.attachTarget = on ? 1 : 0;
-  }
-
-  clipPos(i) {
-    const k = this.attachT;
-    const e = k * k * (3 - 2 * k);
-    const p = new THREE.Vector3().lerpVectors(this.parked[i], this.attached[i], e);
-    p.y += Math.sin(e * Math.PI) * 0.08;
-    return p;
+  /** Pose a clip: p = jaw tip position, dir = direction the jaws point. */
+  setClip(i, p, dir) {
+    const c = this.clips[i];
+    const prev = c.userData.tip;
+    if (prev && prev.distanceToSquared(p) < 1e-8 && c.userData.dir && c.userData.dir.distanceToSquared(dir) < 1e-6) return;
+    c.userData.dir = dir.clone();
+    c.position.copy(p).addScaledVector(dir, -0.017);
+    c.lookAt(p.clone().addScaledVector(dir, 1));
+    c.rotateY(Math.PI); // jaws (−z) toward p
+    c.userData.tip = p.clone();
+    this.dirty = true;
   }
 
   rebuild() {
@@ -294,44 +303,43 @@ export class LaunchLead {
     this.meshes = [];
     const s = this.start;
     const j = this.junction;
-    // main twin lead lying on the grass in lazy curves
+    if (!s || !j) return;
+    // twin lead lying on the grass in lazy curves (slack between controller and pad)
     const pts = [s.clone()];
-    const n = 7;
+    const d = s.distanceTo(j);
+    const slack = Math.max(0, 5.2 - d);
+    const n = 9;
+    const side = new THREE.Vector3().subVectors(j, s).setY(0).normalize();
+    const perp = new THREE.Vector3(-side.z, 0, side.x);
     for (let i = 1; i < n; i++) {
       const f = i / n;
       const p = new THREE.Vector3().lerpVectors(s, j, f);
-      p.y = 0.004;
-      p.x += Math.sin(f * 9.3) * 0.18 * (1 - f);
-      p.z += Math.cos(f * 7.1) * 0.14 * (1 - f);
+      const onGround = s.y < 0.3 || f > 0.15;
+      p.y = onGround ? 0.004 : s.y * (1 - f / 0.15);
+      p.addScaledVector(perp, Math.sin(f * Math.PI * 3) * (0.08 + slack * 0.12) * (1 - f * 0.6));
       pts.push(p);
     }
     pts.push(j.clone());
-    const main = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 80, 0.0022, 6), this.cableMat);
+    const main = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 90, 0.0022, 6), this.cableMat);
     main.castShadow = true;
     this.group.add(main);
     this.meshes.push(main);
     for (let i = 0; i < 2; i++) {
-      const cp = this.clipPos(i);
-      const mid = new THREE.Vector3().lerpVectors(j, cp, 0.5);
-      mid.y = Math.min(j.y, cp.y) - 0.02;
-      mid.y = Math.max(0.006, mid.y);
-      const curve = new THREE.CatmullRomCurve3([j.clone(), mid, cp.clone().add(new THREE.Vector3(0, -0.012, 0))]);
-      const lead = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.0012, 5), this.leadMats[i]);
+      const clip = this.clips[i];
+      clip.updateMatrixWorld(true);
+      const end = clip.localToWorld(clip.userData.wireLocal.clone());
+      const mid = new THREE.Vector3().lerpVectors(j, end, 0.5);
+      mid.y = Math.max(0.006, Math.min(j.y, end.y) - 0.04);
+      const curve = new THREE.CatmullRomCurve3([j.clone(), mid, end]);
+      const lead = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.0011, 5), this.leadMats[i]);
       lead.castShadow = true;
       this.group.add(lead);
       this.meshes.push(lead);
-      const clip = this.clips[i];
-      clip.position.copy(cp);
-      clip.lookAt(cp.clone().add(new THREE.Vector3().subVectors(cp, j).setY(0).normalize().negate()));
-      if (this.attachT > 0.98) clip.rotation.x += -Math.PI / 2.4;
     }
+    this.dirty = false;
   }
 
-  update(dt) {
-    if (this.attachT !== this.attachTarget) {
-      const s = Math.sign(this.attachTarget - this.attachT);
-      this.attachT = Math.max(0, Math.min(1, this.attachT + s * dt * 1.4));
-      this.rebuild();
-    }
+  update() {
+    if (this.dirty) this.rebuild();
   }
 }

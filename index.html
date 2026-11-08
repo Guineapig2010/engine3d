@@ -12,17 +12,17 @@
       <div id="viewport"></div>
 
       <header id="topbar">
-        <div class="brand"><span class="logo">▲</span> Rocket Flight Lab</div>
+        <div class="brand"><button id="panelToggle" title="Show or hide the setup panel (Tab)">☰</button><span class="logo">▲</span> Rocket Flight Lab</div>
         <div class="views" id="viewButtons">
-          <button data-view="pad" title="Look at the launch pad">Pad</button>
-          <button data-view="controller" title="Stand at the launch controller">Controller</button>
-          <button data-view="track" title="Spectator camera that tracks the rocket">Track</button>
+          <button data-view="eyes" title="Your own eyes — walk around (V cycles cameras)">Eyes</button>
           <button data-view="chase" title="Chase camera">Chase</button>
           <button data-view="onboard" title="Onboard camera looking down">Onboard</button>
-          <button data-view="free" title="Free orbit camera">Free</button>
+          <button data-view="orbit" title="Orbit around the rocket">Orbit</button>
         </div>
         <div class="tools">
-          <label class="toggle"><input type="checkbox" id="xray" /> X-ray / CG·CP</label>
+          <button id="reportBtn" class="hidden">Flight report</button>
+          <button id="resetBtn" title="Put everything back: rocket on the prep table, cap on the rod, key in your pocket">Reset range</button>
+          <label class="toggle"><input type="checkbox" id="xray" /> X-ray</label>
           <label class="toggle"><input type="checkbox" id="sound" checked /> Sound</label>
         </div>
       </header>
@@ -38,14 +38,23 @@
         <div class="tab-body" id="tabBody"></div>
       </aside>
 
-      <section id="sequence">
-        <div class="seq-title">Launch sequence</div>
-        <ol id="seqSteps"></ol>
-        <div class="seq-actions" id="seqActions"></div>
-        <div class="seq-msg" id="seqMsg"></div>
+      <section id="checkPanel">
+        <div class="seq-title">Range checklist</div>
+        <ol id="checklist"></ol>
+        <div class="help" id="help">
+          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run</div>
+          <div>Click the view to look with the mouse · <kbd>Esc</kbd> frees the cursor</div>
+          <div><kbd>E</kbd> interact · <kbd>Z</kbd>/wheel zoom · <kbd>T</kbd> track rocket · <kbd>C</kbd> countdown</div>
+          <div>Holding the controller: <kbd>K</kbd>/right-click push the key · <kbd>Space</kbd>/left-click LAUNCH · <kbd>G</kbd> put down</div>
+        </div>
       </section>
 
-      <section id="hud" class="hidden">
+      <div id="crosshair"></div>
+      <div id="prompt" class="hidden"></div>
+      <div id="closeupHint" class="hidden"></div>
+      <div id="rocketMarker" class="hidden"><div class="arrow">▲</div><div class="label"></div></div>
+
+<section id="hud" class="hidden">
         <div class="hud-grid">
           <div><span class="k">T+</span><span id="hudT">0.00</span> s</div>
           <div><span class="k">ALT</span><span id="hudAlt">0</span> m</div>
