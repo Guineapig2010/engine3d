@@ -1113,20 +1113,56 @@ class App {
     const c = this.world.controls;
     c.enabled = v === 'pad' || v === 'free';
     const cam = this.world.camera;
+    const from = { p: cam.position.clone(), l: cam.position.clone().add(cam.getWorldDirection(new THREE.Vector3()).multiplyScalar(2)), fov: cam.fov };
+    let to = null;
     if (v === 'pad') {
       const L = this.geom ? this.geom.length : 0.4;
-      c.target.set(0.15, 0.15 + L * 0.45, 0.1);
+      const look = new THREE.Vector3(0.15, 0.15 + L * 0.45, 0.1);
       const d = Math.max(1.2, L * 3.2);
-      cam.position.set(d * 0.75, 0.6 + L * 0.5, d * 0.95);
-      cam.fov = 50;
+      to = { p: new THREE.Vector3(d * 0.75, 0.6 + L * 0.5, d * 0.95), l: look, fov: 50 };
+    } else if (v === 'controller') {
+      const C = CONTROLLER_POS;
+      to = {
+        p: C.clone().addScaledVector(this.toPad, -0.3).add(new THREE.Vector3(0, 0.36, 0)),
+        l: C.clone().addScaledVector(this.toPad, 0.9).add(new THREE.Vector3(0, 0.02, 0)),
+        fov: 55,
+      };
     } else if (v === 'free') {
       cam.fov = 50;
     }
+    // eased camera move that arcs up to standing eye height (like walking over)
+    this.camTween = to && from.p.distanceTo(to.p) > 0.05 ? { from, to, k: 0, dur: Math.min(2.2, 0.8 + from.p.distanceTo(to.p) * 0.25) } : null;
+    if (to && !this.camTween) {
+      cam.position.copy(to.p);
+      cam.lookAt(to.l);
+      if (v === 'pad') c.target.copy(to.l);
+    }
+    this.camTo = to;
     cam.updateProjectionMatrix();
-    this.camBlend = 0;
+  }
+
+  updateCameraTween(dt) {
+    const T = this.camTween;
+    const cam = this.world.camera;
+    T.k = Math.min(1, T.k + dt / T.dur);
+    const e = ease(T.k);
+    cam.position.lerpVectors(T.from.p, T.to.p, e);
+    const lift = Math.max(0, 1.6 - Math.min(T.from.p.y, T.to.p.y)) * Math.sin(Math.PI * e) * Math.min(1, T.from.p.distanceTo(T.to.p) / 3);
+    cam.position.y += lift;
+    cam.lookAt(new THREE.Vector3().lerpVectors(T.from.l, T.to.l, e));
+    cam.fov = T.from.fov + (T.to.fov - T.from.fov) * e;
+    cam.updateProjectionMatrix();
+    if (T.k >= 1) {
+      this.camTween = null;
+      if (this.view === 'pad') this.world.controls.target.copy(T.to.l);
+    }
   }
 
   updateCamera(dt) {
+    if (this.camTween) {
+      this.updateCameraTween(dt);
+      return;
+    }
     const cam = this.world.camera;
     const target = this.model ? this.model.root.position.clone().addScaledVector(new THREE.Vector3(0, 1, 0).applyQuaternion(this.model.root.quaternion), this.geom.length * 0.5) : new THREE.Vector3();
     const flying = !!this.flight;
@@ -1138,11 +1174,10 @@ class App {
     switch (this.view) {
       case 'controller': {
         const C = CONTROLLER_POS;
-        const eye = C.clone().addScaledVector(this.toPad, -0.3).add(new THREE.Vector3(0, 0.36, 0));
-        cam.position.lerp(eye, 1 - Math.exp(-dt * 6));
-        const look = C.clone().addScaledVector(this.toPad, 0.9).add(new THREE.Vector3(0, 0.02, 0));
-        cam.lookAt(look);
-        cam.fov += (55 - cam.fov) * ease;
+        void C;
+        cam.position.copy(this.camTo.p);
+        cam.lookAt(this.camTo.l);
+        cam.fov = this.camTo.fov;
         break;
       }
       case 'track': {
