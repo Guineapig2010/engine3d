@@ -4,6 +4,12 @@
 // to hold it, then the leads are bent apart so the micro-clips can't touch.
 import * as THREE from 'three';
 
+function hitProxy(geo) {
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ visible: false }));
+  m.userData.proxy = true;
+  return m;
+}
+
 const COPPER = new THREE.MeshStandardMaterial({ color: 0xc8753a, metalness: 1, roughness: 0.32 });
 
 export class Starter {
@@ -19,6 +25,12 @@ export class Starter {
     // paper tab with the starter's lot label, kept on the leads until you bend them
     this.wires = [];
     this.rebuild();
+    // generous grab area around the leads and tip
+    const grab = hitProxy(new THREE.BoxGeometry(0.016, 0.075, 0.016));
+    grab.position.y = -0.016;
+    const grabBent = hitProxy(new THREE.BoxGeometry(0.075, 0.016, 0.016));
+    grabBent.position.y = -0.006;
+    this.group.add(grab, grabBent);
   }
 
   /** Lead path (starter-local). +y is into the motor; y = 0 is the nozzle exit. */
@@ -113,5 +125,6 @@ export class IgniterPlug {
     tab.position.y = -0.0045;
     this.group.add(body, flange, tab);
     this.group.traverse((o) => (o.castShadow = true));
+    this.group.add(hitProxy(new THREE.SphereGeometry(0.012, 10, 8)));
   }
 }

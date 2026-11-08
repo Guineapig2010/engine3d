@@ -765,8 +765,19 @@ kbd {
   z-index: 3;
 }
 
-body.in-closeup #crosshair {
+body.in-closeup #crosshair,
+body.in-closeup #checkPanel {
   display: none;
+}
+
+#viewport,
+#topbar,
+#checkPanel,
+#hud,
+#prompt,
+#closeupHint {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #prompt {
@@ -793,7 +804,7 @@ body.in-closeup #crosshair {
 #closeupHint {
   position: absolute;
   left: 50%;
-  bottom: 18px;
+  top: 56px;
   transform: translateX(-50%);
   width: min(560px, calc(100vw - 32px));
   background: rgba(10, 12, 16, 0.88);

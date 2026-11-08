@@ -734,7 +734,7 @@ class App {
     }
     this.focus = best;
     if (best) this.hud.setPrompt(best.label);
-    else if (this.g.controller === 'hand') this.hud.setPrompt('Look at the controller (hold K: push key · Space: LAUNCH · G: put down)');
+    else if (this.g.controller === 'hand' && !this.flight) this.hud.setPrompt('Raise the controller to look at it · G puts it down');
     else this.hud.setPrompt(null);
   }
 
@@ -860,9 +860,10 @@ class App {
       const N = this.nozzleWorld(0);
       const a = this.motorAxisWorld();
       if (!onPad) {
-        const pos = N.clone().addScaledVector(a, -0.15).addScaledVector(this.tableAcross, 0.08).add(V(0, 0.12, 0));
-        const look = N.clone().addScaledVector(this.tableAcross, 0.05).addScaledVector(a, -0.025).add(V(0, -0.02, 0));
-        return { pos, look, fov: 42 };
+        const kit = this.kitStarterHome ? this.kitStarterHome.p : N;
+        const mid = new THREE.Vector3().lerpVectors(N, kit, 0.45);
+        const pos = mid.clone().addScaledVector(a, -0.17).addScaledVector(this.tableAcross, 0.06).add(V(0, 0.16, 0));
+        return { pos, look: mid, fov: 44 };
       }
       const side = this.player.pos.clone().setY(0).sub(N.clone().setY(0)).normalize();
       const pos = N.clone().addScaledVector(side, 0.17).add(V(0, -0.02, 0));
@@ -941,7 +942,7 @@ class App {
   installStarter() {
     const motor = this.model.igniterMotor;
     motor.group.attach(this.starter.group);
-    this.slide = { obj: this.starter.group, from: this.starter.group.position.clone(), fromQ: this.starter.group.quaternion.clone(), t: 0 };
+    (this.slides ||= []).push({ obj: this.starter.group, from: this.starter.group.position.clone(), fromQ: this.starter.group.quaternion.clone(), t: 0 });
     this.g.starter = 'installed';
     this.sound.click();
   }
@@ -949,20 +950,19 @@ class App {
   installPlug() {
     const motor = this.model.igniterMotor;
     motor.group.attach(this.plug.group);
-    this.slide = { obj: this.plug.group, from: this.plug.group.position.clone(), fromQ: this.plug.group.quaternion.clone(), t: 0 };
+    (this.slides ||= []).push({ obj: this.plug.group, from: this.plug.group.position.clone(), fromQ: this.plug.group.quaternion.clone(), t: 0 });
     this.g.plug = 'installed';
     this.sound.click();
   }
 
   updateSlide(dt) {
-    const S = this.slide;
-    if (S) {
+    for (const S of this.slides || []) {
       S.t = Math.min(1, S.t + dt / 0.3);
       const e = ease(S.t);
       S.obj.position.lerpVectors(S.from, V(0, 0, 0), e);
       S.obj.quaternion.slerpQuaternions(S.fromQ, new THREE.Quaternion(), e);
-      if (S.t >= 1) this.slide = null;
     }
+    if (this.slides) this.slides = this.slides.filter((S) => S.t < 1);
     if (this.bendAnim !== undefined && this.bendAnim !== null) {
       this.bendAnim = Math.min(1, this.bendAnim + dt / 0.45);
       this.starter.setBend(ease(this.bendAnim));
@@ -1171,9 +1171,9 @@ class App {
     const r = V(1, 0, 0).applyQuaternion(cam.quaternion);
     const u = V(0, 1, 0).applyQuaternion(cam.quaternion);
     const inspect = g.controller === 'inspect';
-    const p = cam.position.clone().addScaledVector(f, inspect ? 0.27 : 0.32).addScaledVector(r, inspect ? -0.01 : 0.15).addScaledVector(u, inspect ? -0.035 : -0.2);
+    const p = cam.position.clone().addScaledVector(f, inspect ? 0.27 : 0.32).addScaledVector(r, inspect ? -0.01 : -0.05).addScaledVector(u, inspect ? -0.035 : -0.2);
     c.position.copy(p);
-    const q = cam.quaternion.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(inspect ? 1.05 : 0.75, Math.PI, inspect ? 0 : 0.15)));
+    const q = cam.quaternion.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(inspect ? 1.05 : 0.8, Math.PI, inspect ? 0 : -0.12)));
     c.quaternion.copy(q);
     this.cordDirty = true;
   }
@@ -1596,7 +1596,13 @@ class App {
     const inCloseupCam = this.closeup.active && this.closeup.active.cam;
     if (this.view === 'eyes') {
       if (!inCloseupCam) {
-        if (this.track && this.flight && !this.closeup.active) this.player.steerToward(target, dt, 5);
+        if (this.track && this.flight && !this.closeup.active) {
+          this.player.steerToward(target, dt, 5);
+          // keep the rocket a visible size: zoom like a spotter with binoculars
+          const dist = this.player.eyePos().distanceTo(target);
+          const want = THREE.MathUtils.clamp((dist * 0.035) / Math.max(0.05, this.geom.length), 1, 10);
+          this.player.zoom += (want - this.player.zoom) * (1 - Math.exp(-dt * 2));
+        }
         this.player.update(dt);
       } else this.closeup.update(dt);
       if (this.closeup.active && !inCloseupCam) this.closeup.update(dt);

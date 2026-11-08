@@ -10,6 +10,12 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
+function hitProxy(geo) {
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ visible: false }));
+  m.userData.proxy = true;
+  return m;
+}
+
 export const CORD_LENGTH = 5.2; // m (17 ft)
 
 function labelTexture() {
@@ -119,6 +125,9 @@ export class LaunchController {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.0075, 0.0009, 6, 24), chrome);
     ring.position.y = 0.026;
     key.add(blade, tip, grip, ring);
+    const keyGrab = hitProxy(new THREE.BoxGeometry(0.032, 0.06, 0.02));
+    keyGrab.position.y = 0.006;
+    key.add(keyGrab);
     key.traverse((o) => (o.castShadow = true));
     this.key = key;
     this.keyGrip = grip;
@@ -258,6 +267,9 @@ function microClip(color) {
   crimp.position.z = 0.016;
   g.add(crimp);
   g.traverse((o) => (o.castShadow = true));
+  const grab = hitProxy(new THREE.BoxGeometry(0.016, 0.014, 0.045));
+  grab.position.z = 0.002;
+  g.add(grab);
   g.userData.wireLocal = new THREE.Vector3(0, 0, 0.019);
   return g;
 }
