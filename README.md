@@ -5,7 +5,7 @@ rocket, put real **A–F motors** in it (every delay variant, from certified thr
 curves), set it up on a detailed launch pad, then walk through the real
 **ignition sequence on the launch controller** and watch it fly.
 
-![launch sequence](docs/screenshot.png)
+![Sparrow C descending under its parachute](docs/screenshot.png)
 
 ## Quick start
 
@@ -18,7 +18,9 @@ npm run dev
 ```
 
 Open the printed URL (usually http://localhost:5173). `npm run build` makes a static
-site in `dist/` that you can host anywhere.
+site in `dist/` that you can host anywhere, and `npm run build:single` also writes
+`dist/rocket-flight-lab.html`, a single self-contained file with the example rockets
+embedded. `npm test` runs the physics tests.
 
 ## What's in it
 
