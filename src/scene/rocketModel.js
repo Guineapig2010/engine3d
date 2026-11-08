@@ -529,8 +529,10 @@ export class RocketModel {
       for (let i = 0; i < pos.count; i++) {
         const by = R.base[i * 3 + 1];
         const f = 0.5 + by / len; // 0 at the attached (lower) end
-        pos.setX(i, R.base[i * 3] + (landed ? 0 : Math.sin(time * 9 + f * 10) * 0.05 * f * len * 0.3));
-        pos.setZ(i, landed ? 0 : Math.cos(time * 7 + f * 8) * 0.04 * f);
+        const bx = R.base[i * 3];
+        const tw = landed ? 0 : f * 2.6 + Math.sin(time * 3 + f * 6) * 0.6; // twisting ribbon
+        pos.setX(i, bx * Math.cos(tw) + (landed ? 0 : Math.sin(time * 9 + f * 10) * 0.05 * f * len * 0.3));
+        pos.setZ(i, bx * Math.sin(tw) + (landed ? 0 : Math.cos(time * 7 + f * 8) * 0.04 * f));
       }
       pos.needsUpdate = true;
       rib.geometry.computeVertexNormals();

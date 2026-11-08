@@ -1186,7 +1186,7 @@ class App {
         cam.lookAt(target);
         const dist = cam.position.distanceTo(target);
         const want = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan((this.geom.length * 3 + 0.002 * dist) / dist)), 1.2, 40);
-        cam.fov += (want - cam.fov) * (1 - Math.exp(-dt * 2));
+        cam.fov += (want - cam.fov) * (1 - Math.exp(-dt * 6));
         break;
       }
       case 'chase': {
@@ -1197,10 +1197,12 @@ class App {
           if (v.length() < 2) v.set(0, 1, 0);
           v.normalize();
         }
+        // smooth the viewing direction only, so the camera never falls behind a fast rocket
+        this.chaseDir = (this.chaseDir || v.clone()).lerp(v, 1 - Math.exp(-dt * 3)).normalize();
         const back = Math.max(1.5, this.geom.length * 6);
-        const eye = target.clone().addScaledVector(v, -back).add(new THREE.Vector3(back * 0.25, back * 0.15, back * 0.2));
+        const eye = target.clone().addScaledVector(this.chaseDir, -back).add(new THREE.Vector3(back * 0.25, back * 0.15, back * 0.2));
         if (eye.y < 0.3) eye.y = 0.3;
-        cam.position.lerp(eye, 1 - Math.exp(-dt * 6));
+        cam.position.copy(eye);
         cam.lookAt(target);
         cam.fov += (45 - cam.fov) * ease;
         break;
