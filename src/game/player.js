@@ -52,7 +52,7 @@ export class Player {
     dom.addEventListener('wheel', (e) => {
       if (!this.enabled) return;
       e.preventDefault();
-      this.zoom = THREE.MathUtils.clamp(this.zoom * (e.deltaY > 0 ? 0.85 : 1.18), 1, 12);
+      this.zoom = THREE.MathUtils.clamp(this.zoom * (e.deltaY > 0 ? 0.85 : 1.18), 1, 20);
     }, { passive: false });
   }
 

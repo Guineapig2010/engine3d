@@ -1610,7 +1610,7 @@ class App {
           this.player.steerToward(target, dt, this.playT < 1.5 ? 12 : 6);
           // keep the rocket a visible size: zoom like a spotter with binoculars
           const dist = this.player.eyePos().distanceTo(target);
-          const want = THREE.MathUtils.clamp((dist * 0.035) / Math.max(0.05, this.geom.length), 1, 10);
+          const want = THREE.MathUtils.clamp((dist * 0.05) / Math.max(0.05, this.geom.length), 1, 20);
           this.player.zoom += (want - this.player.zoom) * (1 - Math.exp(-dt * 2));
         }
         this.player.update(dt);
@@ -1753,6 +1753,8 @@ class App {
     this.effects.update(dt * (this.flight && !this.flight.done ? this.speed : 1));
     this.updateFocus();
     this.updateMarker();
+    // don't cover the rocket with the crosshair while you're tracking it
+    document.body.classList.toggle('tracking', !!(this.track && this.flight && !this.flight.done));
     if (Math.floor(this.time * 4) !== Math.floor((this.time - dt) * 4)) this.updateChecklist();
     this.world.render();
   }

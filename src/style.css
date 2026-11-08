@@ -765,6 +765,7 @@ kbd {
   z-index: 3;
 }
 
+body.tracking #crosshair,
 body.in-closeup #crosshair,
 body.in-closeup #checkPanel {
   display: none;
