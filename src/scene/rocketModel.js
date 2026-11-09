@@ -233,6 +233,9 @@ export class RocketModel {
     };
     const outer = mk(r * 1.6, r * 14, look.flame, 0.75);
     const inner = mk(r * 0.7, r * 7, 0xffffff, 0.95);
+    // HDR-bright so the flame glows (and blooms on High/Ultra graphics)
+    outer.material.color.multiplyScalar(2.2);
+    inner.material.color.multiplyScalar(3.5);
     flame.add(outer, inner);
     const glow = new THREE.PointLight(look.flame, 0, 6, 2);
     glow.position.y = -r * 3;

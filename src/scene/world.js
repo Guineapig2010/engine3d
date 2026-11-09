@@ -13,7 +13,7 @@ export const QUALITY = {
   low: { label: 'Low', pixelRatio: 1, shadows: 0, bloom: false, grade: false, flare: false, grass: 0, grassR: 0, clouds: 0, smoke: 9000 },
   medium: { label: 'Medium', pixelRatio: 1.25, shadows: 1024, bloom: false, grade: false, flare: false, grass: 0, grassR: 0, clouds: 18, smoke: 16000 },
   high: { label: 'High', pixelRatio: 1.5, shadows: 2048, bloom: true, grade: false, flare: false, grass: 45000, grassR: 16, clouds: 28, smoke: 26000 },
-  ultra: { label: 'Ultra', pixelRatio: 2, shadows: 4096, bloom: true, grade: true, flare: true, grass: 160000, grassR: 30, clouds: 40, smoke: 42000 },
+  ultra: { label: 'Ultra', pixelRatio: 2, shadows: 4096, bloom: true, grade: true, flare: true, grass: 130000, grassR: 26, clouds: 40, smoke: 42000 },
 };
 
 // cinematic colour grade: gentle S-curve, warm highlights, vignette and film grain
@@ -263,7 +263,8 @@ export class World {
       c.addPass(new RenderPass(this.scene, this.camera));
       if (q.bloom) {
         const size = r.getSize(new THREE.Vector2());
-        this.bloom = new UnrealBloomPass(size, level === 'ultra' ? 0.55 : 0.4, 0.5, 0.92);
+        // high threshold: the HDR sky must not bloom, only the sun, flames and the LED
+        this.bloom = new UnrealBloomPass(size, level === 'ultra' ? 0.7 : 0.5, 0.45, 2.6);
         c.addPass(this.bloom);
       }
       c.addPass(new OutputPass());

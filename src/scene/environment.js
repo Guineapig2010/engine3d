@@ -364,15 +364,17 @@ export class Environment {
       this.grass = null;
     }
     if (!count) return;
-    const blade = new THREE.PlaneGeometry(0.03, 1, 1, 3);
+    const blade = new THREE.PlaneGeometry(0.014, 1, 1, 3);
     blade.translate(0, 0.5, 0);
     const bp = blade.attributes.position;
     const colors = [];
     for (let i = 0; i < bp.count; i++) {
       const y = bp.getY(i);
       bp.setX(i, bp.getX(i) * (1 - y * 0.92)); // taper to a point
-      const c = new THREE.Color().setHSL(0.24 + Math.random() * 0.02, 0.5, 0.12 + y * 0.22);
+      const c = new THREE.Color().setHSL(0.23 + Math.random() * 0.03, 0.55, 0.2 + y * 0.2);
       colors.push(c.r, c.g, c.b);
+      // grass-card trick: normals point up so blades are lit like the ground they grow from
+      blade.attributes.normal.setXYZ(i, 0, 1, 0);
     }
     blade.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     const geo = new THREE.InstancedBufferGeometry().copy(blade);
