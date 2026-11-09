@@ -135,6 +135,10 @@ export function buildVehicle(settings) {
     });
     // Aerodynamics of the stack from the nose down to (and including) this stage.
     s.aero = aeroForSection(geom, s.xBottom);
+    // caliber for this stack's stability margin: its own widest body (not a fat booster below it)
+    let rMax = 0;
+    for (let i = 0; i < geom.nSlices; i++) if (geom.xs[i] <= s.xBottom) rMax = Math.max(rMax, geom.rb[i]);
+    s.caliber = 2 * (rMax || geom.refRadius);
     s.drag = dragGeometry(geom, s.xBottom);
     s.length = s.xBottom - s.xTop;
   }
@@ -301,7 +305,7 @@ export function simulate(vehicle, launch = {}) {
   const stab = (lowI) => {
     const mpS = massProps(lowI, 0);
     const a = stages[lowI].aero;
-    return { xcg: mpS.xcg, xcp: a.xcp, margin: (a.xcp - mpS.xcg) / geom.refDiameter, cna: a.cna };
+    return { xcg: mpS.xcg, xcp: a.xcp, margin: (a.xcp - mpS.xcg) / stages[lowI].caliber, cna: a.cna, caliber: stages[lowI].caliber };
   };
   const stability = stages.map((_, k) => stab(k));
 
@@ -388,6 +392,7 @@ export function simulate(vehicle, launch = {}) {
     let area = 0;
     if (recovery.type === 'parachute') area = recovery.cd * Math.PI * Math.pow(recovery.diameter / 2, 2);
     else if (recovery.type === 'streamer') area = recovery.cd * recovery.streamerWidth * recovery.streamerLength;
+    // 'tumble' (featherweight): the ejection charge pushes the motor back and the rocket tumbles; body drag only
     // the rocket body hangs sideways and adds drag too
     const body = 0.6 * geom.refDiameter * stages[stages.length - 1].length + 0.2 * geom.refArea;
     return area * infl * infl + body;
@@ -637,7 +642,7 @@ export function simulate(vehicle, launch = {}) {
     noseOff = true;
     phase = 'recovery';
     state.w = [0, 0, 0];
-    event('deploy', recovery.type === 'parachute' ? 'Parachute deployed' : 'Streamer deployed');
+    event('deploy', recovery.type === 'parachute' ? 'Parachute deployed' : recovery.type === 'tumble' ? 'Tumbling (featherweight recovery)' : 'Streamer deployed');
   }
 
   // ---- summary -------------------------------------------------------------
@@ -664,7 +669,7 @@ export function simulate(vehicle, launch = {}) {
   } else if (top0 && top0.motor.plugged) {
     warnings.push('Plugged motor: there is no ejection charge, so the recovery system never deploys.');
   }
-  const hardLanding = recovery.type === 'streamer' ? 9 : 7;
+  const hardLanding = recovery.type === 'streamer' || recovery.type === 'tumble' ? 9 : 7;
   if (landing && landing.v > hardLanding && recoveryDeployed)
     warnings.push(`Landing at ${landing.v.toFixed(1)} m/s is hard — use a bigger ${recovery.type === 'streamer' ? 'streamer or a parachute' : 'parachute'}.`);
 

@@ -227,21 +227,23 @@ export function analyzeRocket(positions, opts = {}) {
   for (let i = 0; i < nSlices; i++) {
     let n = 0;
     for (const f of finSets) if (i >= f.i0 && i <= f.i1) n = f.count;
-    shellArea[i] = 2 * Math.PI * rb[i] * dA + 2 * n * finSpan[i] * dA;
+    // body skin + fin planform (balsa fins weigh about the same per area as one tube wall)
+    shellArea[i] = 2 * Math.PI * rb[i] * dA + 1.0 * n * finSpan[i] * dA;
   }
 
   // nose length: from tip until radius reaches 97% of the local max body radius
+  // measured against the widest radius in the FRONT of the rocket, so a fat booster
+  // or flare near the tail doesn't make the "nose" stretch down the whole stack
   let noseLen = 0;
   {
-    let peak = 0;
+    let frontMax = 0;
+    for (let i = 0; i < nSlices && xs[i] < 0.45 * L; i++) frontMax = Math.max(frontMax, rb[i]);
     for (let i = 0; i < nSlices; i++) {
-      peak = Math.max(peak, rb[i]);
-      if (rb[i] >= 0.97 * rRef) {
+      if (rb[i] >= 0.97 * frontMax) {
         noseLen = xs[i];
         break;
       }
     }
-    void peak;
   }
 
   // ---- local transform (raw STL → rocket frame) --------------------------
@@ -496,11 +498,11 @@ function findTubes(pts, rb) {
   // points clearly inside the body tube wall
   const inner = pts.filter(([x, y]) => {
     const r = Math.hypot(x, y);
-    return r < 0.86 * rb;
+    return r < 0.9 * rb;
   });
   if (inner.length < 12) inner.length = 0; // nothing inside: may still be minimum diameter
   // grid-hash connected components (link distance 2.5 mm)
-  const link = 0.0025;
+  const link = 0.0015;
   const cell = new Map();
   const key = (x, y) => `${Math.floor(x / link)},${Math.floor(y / link)}`;
   inner.forEach((p, i) => {
@@ -706,7 +708,8 @@ export function estimateAirframeMass(geom, xTop = 0, xBottom = geom.length) {
   }
   // ~0.75 kg/m² shell areal density matches typical cardboard/balsa/plastic kits,
   // scaled up a little for larger diameters (thicker tubes).
-  const density = 0.75 * Math.max(0.8, Math.min(2.2, geom.refDiameter / 0.025));
+  // calibrated on published Estes kit weights (Wizard, Big Bertha, Der Red Max, Leviathan…)
+  const density = 0.6 * Math.max(1, Math.pow(geom.refDiameter / 0.04, 0.8));
   return a * density;
 }
 

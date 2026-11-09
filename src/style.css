@@ -261,6 +261,21 @@ input[type='color'] {
   gap: 6px;
 }
 
+.ex-group {
+  margin-bottom: 6px;
+}
+
+.ex-group summary {
+  cursor: pointer;
+  padding: 5px 2px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.ex-group .examples {
+  margin: 4px 0 8px;
+}
+
 .example {
   text-align: left;
   padding: 8px 10px;

@@ -255,12 +255,14 @@ class App {
     st.units = 'mm';
     st.axis = 'auto';
     st.flip = false;
-    st.massAuto = true;
-    st.noseWeightG = 0;
+    // real kits fly at their published weight; our own designs use the model estimate
+    st.massAuto = ex.massG == null;
+    if (ex.massG != null) st.massG = ex.massG;
+    st.noseWeightG = ex.noseWeightG || 0;
     st.cdOverride = null;
     st.assembleDisabled = false;
     st.partOrder = [];
-    st.stages = ex.stages.map((s) => ({ motorId: s.motorId, count: 1 }));
+    st.stages = ex.stages.map((s) => ({ motorId: s.motorId, count: s.count || 1 }));
     st.presetStations = ex.stations || null;
     st.staging = { method: 'direct', delay: 0 };
     st.recovery = { ...st.recovery, ...ex.recovery };
@@ -329,7 +331,6 @@ class App {
     this.geom = geom;
     this._mountCache = null;
     this.estimatedMass = estimateAirframeMass(geom);
-    if (!st.massAuto && fresh) st.massAuto = true;
     if (this.assembly) {
       st.stations = this.assembly.stations.slice();
       const n = st.stations.length + 1;

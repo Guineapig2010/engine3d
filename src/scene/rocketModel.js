@@ -432,6 +432,15 @@ export class RocketModel {
     const R = this.recoveryObj;
     const P = new THREE.Vector3(...p);
     const L = this.L;
+    if (R.type === 'tumble' || R.type === 'none') {
+      // featherweight / tumble recovery: the rocket cartwheels down in one piece
+      const ax = landed ? new THREE.Vector3(1, 0, 0.3).normalize() : new THREE.Vector3(Math.cos(time * 9), Math.sin(time * 9) * 0.9, Math.sin(time * 4) * 0.4).normalize();
+      if (landed) P.y = this.geom.refRadius + 0.002;
+      this.setPose(P.clone().addScaledVector(ax, -(L - xcg)), ax);
+      this.updateAttached();
+      R.group.visible = false;
+      return;
+    }
     // body: hang roughly horizontal, gently swinging
     let axis;
     if (landed) axis = new THREE.Vector3(1, 0.0, 0.25).normalize();

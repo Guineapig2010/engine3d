@@ -85,7 +85,24 @@ export class Panel {
     const app = this.app;
     const st = app.state;
     const g = app.geom;
-    const ex = EXAMPLES.map((e) => `<button class="example ${st.exampleId === e.id ? 'active' : ''}" data-ex="${e.id}"><b>${esc(e.name)}</b><span>${esc(e.blurb)}</span></button>`).join('');
+    const groups = [
+      ['crazy', 'Ultra crazy'],
+      ['starter', 'Starter examples'],
+      ['original', 'Original designs'],
+      ['estes', 'Real Estes kits'],
+    ];
+    this.openGroups ||= new Set(['crazy', 'starter']);
+    const cur = EXAMPLES.find((e) => e.id === st.exampleId);
+    if (cur) this.openGroups.add(cur.group);
+    const ex = groups
+      .map(([g, title]) => {
+        const list = EXAMPLES.filter((e) => e.group === g);
+        if (!list.length) return '';
+        return `<details class="ex-group" data-group="${g}" ${this.openGroups.has(g) ? 'open' : ''}><summary>${title} <span class="hint">(${list.length})</span></summary><div class="examples">${list
+          .map((e) => `<button class="example ${st.exampleId === e.id ? 'active' : ''}" data-ex="${e.id}"><b>${esc(e.name)}</b><span>${esc(e.blurb)}</span></button>`)
+          .join('')}</div></details>`;
+      })
+      .join('');
     const fins = g ? g.finSets.map((f) => `${f.count} fins — root ${(f.Cr * 1000).toFixed(0)} mm, tip ${(f.Ct * 1000).toFixed(0)} mm, span ${(f.span * 1000).toFixed(0)} mm, sweep ${(f.sweep * 1000).toFixed(0)} mm`).join('<br>') : '';
     const mounts = g?.motorMounts?.length
       ? g.motorMounts.map((m) => `${m.motorDiameter} mm${m.minimumDiameter ? ' (minimum-diameter body)' : ''}${Math.hypot(m.x, m.z) > 0.002 ? ` at (${(m.x * 1000).toFixed(0)}, ${(m.z * 1000).toFixed(0)}) mm` : ' centred'}`).join(', ')
@@ -122,7 +139,8 @@ export class Panel {
       <div class="section"><h3>Mass &amp; drag</h3>
         <div class="row"><label>Airframe mass</label><input type="number" id="mass" min="1" step="1" value="${st.massAuto ? Math.round(app.estimatedMass * 1000) : st.massG}" ${st.massAuto ? 'disabled' : ''}><span class="unit">g</span></div>
         <div class="row"><label></label><label class="toggle"><input type="checkbox" id="massAuto" ${st.massAuto ? 'checked' : ''}> Estimate from the model (no motor, no chute)</label></div>
-        <div class="row"><label>Nose weight</label><input type="number" id="noseWeight" min="0" step="1" value="${st.noseWeightG}"><span class="unit">g</span></div>
+        <div class="row"><label>Nose weight (clay)</label><input type="number" id="noseWeight" min="0" step="0.5" value="${st.noseWeightG}"><span class="unit">g</span></div>
+        ${cur?.kitWeightG ? `<div class="hint">Published kit weight ${cur.kitWeightG} g (without motor).</div>` : ''}
         <div class="row"><label>Drag coefficient</label><input type="number" id="cd" min="0.1" max="2" step="0.01" placeholder="auto" value="${st.cdOverride ?? ''}"><span class="unit">Cd</span></div>
       </div>
       <div class="section"><h3>Stability &amp; prediction</h3>
@@ -130,6 +148,9 @@ export class Panel {
         <div id="liveStats"></div>
       </div>`;
     this.body.querySelectorAll('[data-ex]').forEach((b) => b.addEventListener('click', () => app.loadExample(b.dataset.ex)));
+    this.body.querySelectorAll('details.ex-group').forEach((d) =>
+      d.addEventListener('toggle', () => (d.open ? this.openGroups.add(d.dataset.group) : this.openGroups.delete(d.dataset.group)))
+    );
     $('#stlInput').addEventListener('change', (e) => e.target.files[0] && app.loadFile(e.target.files[0]));
     $('#units').addEventListener('change', (e) => app.setGeometryOption({ units: e.target.value }));
     $('#axis').addEventListener('change', (e) => app.setGeometryOption({ axis: e.target.value }));
@@ -309,7 +330,8 @@ export class Panel {
         <div class="row"><label>Type</label><select id="recType">
           <option value="parachute" ${r.type === 'parachute' ? 'selected' : ''}>Parachute</option>
           <option value="streamer" ${r.type === 'streamer' ? 'selected' : ''}>Streamer</option>
-          <option value="none" ${r.type === 'none' ? 'selected' : ''}>None (featherweight / lawn dart)</option></select></div>
+          <option value="tumble" ${r.type === 'tumble' ? 'selected' : ''}>Tumble / featherweight (tiny rockets)</option>
+          <option value="none" ${r.type === 'none' ? 'selected' : ''}>None (lawn dart!)</option></select></div>
         ${r.type === 'parachute' ? `
         <div class="row"><label>Canopy diameter</label><select id="chuteSize">${[12, 15, 18, 24, 30, 36].map((d) => `<option value="${d}" ${d === r.diameterIn ? 'selected' : ''}>${d}" (${(d * 2.54).toFixed(0)} cm)</option>`).join('')}</select></div>
         <div class="row"><label>Drag coefficient</label><input type="number" id="recCd" step="0.05" min="0.3" max="1.5" value="${r.cd}"></div>
@@ -318,7 +340,7 @@ export class Panel {
         <div class="row"><label>Streamer width</label><input type="number" id="stW" step="5" min="10" value="${r.streamerWidth}"><span class="unit">mm</span></div>
         <div class="row"><label>Streamer length</label><input type="number" id="stL" step="25" min="100" value="${r.streamerLength}"><span class="unit">mm</span></div>
         <div class="row"><label>Drag coefficient</label><input type="number" id="recCd" step="0.05" min="0.05" max="1" value="${r.cd}"></div>` : ''}
-        ${r.type !== 'none' ? `<div class="row"><label>Colour</label><input type="color" id="recColor" value="${r.color}"></div>
+        ${r.type === 'parachute' || r.type === 'streamer' ? `<div class="row"><label>Colour</label><input type="color" id="recColor" value="${r.color}"></div>
         <div class="row"><label>Recovery mass</label><input type="number" id="recMass" step="1" min="0" value="${r.massG}"><span class="unit">g</span></div>
         <div class="hint">Includes shock cord and wadding. It rides just behind the nose cone.</div>` : ''}
       </div>

@@ -107,7 +107,8 @@ function medianLateralDist(positions, tris, ui, vi, cu, cv) {
     }
   }
   ds.sort((a, b) => a - b);
-  return ds[Math.floor(ds.length / 2)] || 0;
+  // 90th percentile: a finely meshed nose cone would drag a median far below the body radius
+  return ds[Math.floor(ds.length * 0.9)] || 0;
 }
 
 /** Group components into upright "columns" (one per physical part) for an axis. */
@@ -117,7 +118,8 @@ function columnsForAxis(positions, comps, ai) {
   const vi = (ai + 2) % 3;
   for (const s of stats) {
     const aspect = Math.min(s.sizeU, s.sizeV) / (Math.max(s.sizeU, s.sizeV) || 1);
-    s.core = aspect > 0.55;
+    // round in cross-section AND with some length along the axis (a fin seen face-on is round-ish but flat)
+    s.core = aspect > 0.55 && s.axial > 0.25 * Math.max(s.sizeU, s.sizeV);
   }
   const order = [...stats].sort((a, b) => (a.core === b.core ? b.area - a.area : a.core ? -1 : 1));
   const cols = [];
@@ -141,9 +143,11 @@ function columnsForAxis(positions, comps, ai) {
         }
       }
     }
-    if (best) best.tris.push(...s.tris);
-    else {
-      cols.push({ cu: s.cu, cv: s.cv, radius: Math.max(1e-9, medianLateralDist(positions, s.tris, ui, vi, s.cu, s.cv)), tris: [...s.tris] });
+    if (best) {
+      best.tris.push(...s.tris);
+      best.hasCore ||= s.core;
+    } else {
+      cols.push({ cu: s.cu, cv: s.cv, radius: Math.max(1e-9, medianLateralDist(positions, s.tris, ui, vi, s.cu, s.cv)), tris: [...s.tris], hasCore: s.core });
     }
   }
   return cols;
@@ -169,6 +173,8 @@ export function detectParts(positions, { unitScale = 0.001, axis = 'auto' } = {}
   for (const ai of axes) {
     const cols = columnsForAxis(positions, comps, ai);
     if (cols.length < 2 || cols.length > 8) continue;
+    // each part of a rocket has a round body tube or nose; thin fins alone don't count
+    if (!cols.every((c) => c.hasCore)) continue;
     // every part should be long along this axis (rockets are slender)
     let score = 0;
     let ok = true;

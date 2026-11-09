@@ -1,0 +1,296 @@
+// Catalogue of bundled rocket designs (beyond the four starter examples).
+// Dimensions in millimetres. `preset` becomes the in-game setup.
+//
+// Estes kits: overall length, diameter, fin count, motor mount and recommended
+// motors follow Estes / retailer specification listings. Fin planforms and
+// nose-cone lengths are approximations of the kit parts from photos and
+// published proportions (exact templates aren't published).
+const PI = Math.PI;
+
+const fins = (count, root, tip, span, sweep, extra = {}) => ({ count, root, tip, span, sweep, t: 2.4, ...extra });
+
+export const DESIGNS = [
+  // =========================================================================
+  // ULTRA CRAZY 5-STAGE — exported as five separate parts (auto-stacked)
+  // =========================================================================
+  {
+    id: 'hydra5',
+    group: 'crazy',
+    file: 'hydra-5-five-stage-separated.stl',
+    name: 'HYDRA-5 (five stages!)',
+    blurb: '3×D12-0 cluster booster → D12-0 → C6-0 → C6-0 → C6-7. Five separate parts, stacked on pickup.',
+    layout: 'separated',
+    nose: { shape: 'vonkarman', len: 140 },
+    stages: [
+      {
+        body: [{ len: 220, bt: 'BT80' }, { transition: true, len: 60, od0: 66, od1: 24.8 }],
+        fins: [fins(4, 195, 105, 185, 95, { t: 3.2, phase: PI / 4 })],
+        mounts: [0, 1, 2].map((i) => ({ motor: 24, len: 95, x: 16 * Math.cos((i / 3) * 2 * PI + PI / 3), y: 16 * Math.sin((i / 3) * 2 * PI + PI / 3) })),
+        stub: { len: 18 },
+      },
+      { body: [{ len: 120, bt: 'BT50' }], fins: [fins(4, 105, 50, 85, 55, { phase: 0 })], mounts: [{ motor: 24, len: 70 }], stub: { len: 18 } },
+      { body: [{ len: 110, bt: 'BT50' }], fins: [fins(3, 95, 45, 78, 50)], mounts: [{ motor: 18, len: 72, z: 18 }], stub: { len: 18 } },
+      { body: [{ len: 100, bt: 'BT50' }], fins: [fins(3, 88, 40, 70, 48, { phase: PI / 6 })], mounts: [{ motor: 18, len: 72, z: 18 }], stub: { len: 18 } },
+      { body: [{ len: 430, bt: 'BT50' }], fins: [fins(3, 80, 35, 62, 45)], mounts: [{ motor: 18, len: 72, z: 18 }], lug: { z: 150, len: 40 } },
+    ],
+    preset: { noseWeightG: 15, color: '#0d1b2a',
+      noseColor: '#ff3d00',
+      stages: [{ motorId: 'Estes-D12-0', count: 3 }, { motorId: 'Estes-D12-0' }, { motorId: 'Estes-C6-0' }, { motorId: 'Estes-C6-0' }, { motorId: 'Estes-C6-7' }],
+      recovery: { type: 'streamer', streamerWidth: 75, streamerLength: 1200, cd: 0.25, massG: 8, color: '#ffea00' },
+      rod: '3/16x48',
+    },
+  },
+
+  // =========================================================================
+  // TEN ORIGINAL DESIGNS
+  // =========================================================================
+  {
+    id: 'needle',
+    group: 'original',
+    file: 'needle-13mm.stl',
+    name: 'Needle',
+    blurb: 'Ultra-slim 13 mm minimum-diameter dart · A10-3T · streamer',
+    nose: { shape: 'ogive', len: 60 },
+    stages: [{ body: [{ len: 280, bt: 'BT5' }], fins: [fins(4, 40, 18, 22, 20, { t: 1.6, phase: PI / 4 })], mounts: [{ motor: 13, len: 45 }], lug: { z: 90, len: 30 } }],
+    preset: { color: '#e0e0e0', noseColor: '#00b0ff', stages: [{ motorId: 'Estes-A10-3T' }], recovery: { type: 'streamer', streamerWidth: 25, streamerLength: 400, cd: 0.25, massG: 2, color: '#00e5ff' }, rod: '1/8x36' },
+  },
+  {
+    id: 'thunderhawk',
+    group: 'original',
+    file: 'thunderhawk-fat.stl',
+    name: 'Thunderhawk',
+    blurb: 'Big fat 66 mm low-and-slow flier · D12-3 · 18" chute',
+    nose: { shape: 'elliptic', len: 90 },
+    stages: [{ body: [{ len: 400, bt: 'BT80' }], fins: [fins(4, 165, 85, 120, 75, { t: 3.2, phase: PI / 4 })], mounts: [{ motor: 24, len: 95 }], lug: { z: 150, len: 40 } }],
+    preset: { noseWeightG: 40, color: '#ffb300', noseColor: '#212121', stages: [{ motorId: 'Estes-D12-3' }], recovery: { type: 'parachute', diameterIn: 18, cd: 0.75, massG: 12, color: '#212121' }, rod: '3/16x36' },
+  },
+  {
+    id: 'phantom',
+    group: 'original',
+    file: 'phantom-delta.stl',
+    name: 'Phantom Delta',
+    blurb: 'Delta fins + boattail + Von Kármán nose · E30-7 composite',
+    nose: { shape: 'vonkarman', len: 125 },
+    stages: [
+      {
+        body: [{ transition: true, len: 40, od0: 30, od1: 33.7 }, { len: 440, bt: 'BT55' }],
+        fins: [{ count: 3, root: 150, tip: 0, span: 78, sweep: 150, t: 2.4, z: 40, r: 16.85, phase: PI / 2 }],
+        mounts: [{ motor: 24, len: 95 }],
+        lug: { z: 220, len: 40 },
+      },
+    ],
+    preset: { noseWeightG: 15, color: '#263238', noseColor: '#b0bec5', stages: [{ motorId: 'Estes-E30-7' }], recovery: { type: 'parachute', diameterIn: 15, cd: 0.75, massG: 10, color: '#90a4ae' }, rod: '3/16x48' },
+  },
+  {
+    id: 'clustercub',
+    group: 'original',
+    file: 'cluster-cub-3x18mm.stl',
+    name: 'Cluster Cub',
+    blurb: 'Three C6-5 motors lit together in a 56 mm body · 18" chute',
+    nose: { shape: 'ogive', len: 120 },
+    stages: [
+      {
+        body: [{ len: 460, bt: 'BT70' }],
+        fins: [fins(4, 150, 75, 110, 70, { t: 3.2, phase: PI / 4 })],
+        mounts: [0, 1, 2].map((i) => ({ motor: 18, len: 75, x: 12.5 * Math.cos((i / 3) * 2 * PI + PI / 3), y: 12.5 * Math.sin((i / 3) * 2 * PI + PI / 3) })),
+        lug: { z: 140, len: 40, theta: 0 },
+      },
+    ],
+    preset: { noseWeightG: 30, color: '#43a047', noseColor: '#fdd835', stages: [{ motorId: 'Estes-C6-5', count: 3 }], recovery: { type: 'parachute', diameterIn: 18, cd: 0.75, massG: 12, color: '#fdd835' }, rod: '3/16x36' },
+  },
+  {
+    id: 'payload',
+    group: 'original',
+    file: 'payload-lifter.stl',
+    name: 'Payload Lifter',
+    blurb: 'Slim body, bulbous 42 mm payload bay on a transition · C6-5',
+    nose: { shape: 'ogive', len: 110 },
+    stages: [
+      {
+        body: [{ len: 260, bt: 'BT50' }, { transition: true, len: 35, od0: 24.8, od1: 41.6 }, { len: 120, bt: 'BT60' }],
+        fins: [fins(3, 70, 30, 55, 40)],
+        mounts: [{ motor: 18, len: 75 }],
+        lug: { z: 100, len: 40, r: 12.4 },
+      },
+    ],
+    preset: { color: '#f5f5f5', noseColor: '#7b1fa2', stages: [{ motorId: 'Estes-C6-5' }], recovery: { type: 'parachute', diameterIn: 15, cd: 0.75, massG: 9, color: '#ab47bc' }, rod: '1/8x36' },
+  },
+  {
+    id: 'viper',
+    group: 'original',
+    file: 'swept-viper-6fin.stl',
+    name: 'Swept Viper',
+    blurb: 'Six sharply swept fins on a 34 mm body · D12-5',
+    nose: { shape: 'ogive', len: 130 },
+    stages: [{ body: [{ len: 450, bt: 'BT55' }], fins: [fins(6, 85, 22, 45, 70, { phase: 0 })], mounts: [{ motor: 24, len: 95 }], lug: { z: 200, len: 40, theta: PI / 6 } }],
+    preset: { color: '#1b5e20', noseColor: '#c6ff00', stages: [{ motorId: 'Estes-D12-5' }], recovery: { type: 'parachute', diameterIn: 15, cd: 0.75, massG: 10, color: '#c6ff00' }, rod: '3/16x36' },
+  },
+  {
+    id: 'octo',
+    group: 'original',
+    file: 'octo-8fin.stl',
+    name: 'Octo',
+    blurb: 'Eight small fins and a conical nose · C6-5 · streamer',
+    nose: { shape: 'cone', len: 100 },
+    stages: [{ body: [{ len: 400, bt: 'BT50' }], fins: [fins(8, 55, 30, 35, 20, { t: 1.6, phase: 0 })], mounts: [{ motor: 18, len: 75 }], lug: { z: 150, len: 35, theta: PI / 8 } }],
+    preset: { color: '#ff7043', noseColor: '#263238', stages: [{ motorId: 'Estes-C6-5' }], recovery: { type: 'streamer', streamerWidth: 50, streamerLength: 750, cd: 0.25, massG: 4, color: '#263238' }, rod: '1/8x36' },
+  },
+  {
+    id: 'brute',
+    group: 'original',
+    file: 'brute-29mm-f.stl',
+    name: 'Brute',
+    blurb: 'Heavy 66 mm rocket on a 29 mm F15-6 · 24" chute',
+    nose: { shape: 'ogive', len: 150 },
+    stages: [{ body: [{ len: 520, bt: 'BT80' }], fins: [fins(4, 175, 85, 125, 80, { t: 3.2, phase: PI / 4 })], mounts: [{ motor: 29, len: 120 }], lug: { z: 220, len: 50 } }],
+    preset: { noseWeightG: 30, color: '#b71c1c', noseColor: '#eeeeee', stages: [{ motorId: 'Estes-F15-6' }], recovery: { type: 'parachute', diameterIn: 24, cd: 0.75, massG: 20, color: '#eeeeee' }, rod: '3/16x48' },
+  },
+  {
+    id: 'dart',
+    group: 'original',
+    file: 'altitude-dart-f39.stl',
+    name: 'Altitude Dart',
+    blurb: 'Minimum-diameter 24 mm composite screamer · F39-9T',
+    nose: { shape: 'vonkarman', len: 140 },
+    stages: [{ body: [{ len: 480, bt: 'BT50' }], fins: [fins(3, 70, 20, 36, 55, { t: 2.0 })], mounts: [{ motor: 24, len: 70 }], lug: { z: 220, len: 40 } }],
+    preset: { color: '#eceff1', noseColor: '#d50000', stages: [{ motorId: 'AeroTech-F39-9T' }], recovery: { type: 'streamer', streamerWidth: 75, streamerLength: 1200, cd: 0.25, massG: 6, color: '#d50000' }, rod: '3/16x48' },
+  },
+  {
+    id: 'inverter',
+    group: 'original',
+    file: 'inverter-forward-swept.stl',
+    name: 'Inverter',
+    blurb: 'Forward-swept fins and a parabolic nose · D12-5',
+    nose: { shape: 'parabolic', len: 110 },
+    stages: [{ body: [{ len: 470, bt: 'BT55' }], fins: [fins(4, 95, 75, 62, -25, { z: 0, phase: PI / 4 })], mounts: [{ motor: 24, len: 95 }], lug: { z: 180, len: 40 } }],
+    preset: { color: '#4527a0', noseColor: '#ffd740', stages: [{ motorId: 'Estes-D12-5' }], recovery: { type: 'parachute', diameterIn: 15, cd: 0.75, massG: 10, color: '#ffd740' }, rod: '3/16x36' },
+  },
+
+  // =========================================================================
+  // TEN REAL ESTES KITS (from published specs)
+  // =========================================================================
+  {
+    id: 'alpha3',
+    group: 'estes',
+    file: 'estes-alpha-iii.stl',
+    name: 'Estes Alpha III',
+    blurb: 'Kit #1256 · 31.1 cm × 24.9 mm · plastic fin can · C6-5 · 12" chute',
+    nose: { shape: 'ogive', len: 75, shoulder: 20 },
+    stages: [{ body: [{ len: 236, bt: 'BT50' }], fins: [fins(3, 62, 22, 40, 45, { t: 2.2 })], mounts: [{ motor: 18, len: 70 }], lug: { z: 70, len: 35 } }],
+    preset: { massG: 27, kitWeightG: 34,  color: '#cfd8dc', noseColor: '#ff6f00', stages: [{ motorId: 'Estes-C6-5' }], recovery: { type: 'parachute', diameterIn: 12, cd: 0.75, massG: 7, color: '#ff6f00' }, rod: '1/8x36' },
+  },
+  {
+    id: 'bigbertha',
+    group: 'estes',
+    file: 'estes-big-bertha.stl',
+    name: 'Estes Big Bertha',
+    blurb: 'Kit #1948 · 61 cm × 41.6 mm (BT-60) · 4 big fins · C6-5 · 18" chute',
+    nose: { shape: 'ogive', len: 145, shoulder: 25 },
+    stages: [{ body: [{ len: 465, bt: 'BT60' }], fins: [fins(4, 102, 50, 70, 50, { t: 3.2, phase: PI / 4 })], mounts: [{ motor: 18, len: 70 }], lug: { z: 150, len: 50 } }],
+    preset: { massG: 52, kitWeightG: 62,  color: '#1f1f1f', noseColor: '#f5f5f5', stages: [{ motorId: 'Estes-C6-5' }], recovery: { type: 'parachute', diameterIn: 18, cd: 0.75, massG: 10, color: '#f5f5f5' }, rod: '1/8x36' },
+  },
+  {
+    id: 'redmax',
+    group: 'estes',
+    file: 'estes-der-red-max.stl',
+    name: 'Estes Der Red Max',
+    blurb: 'Kit #0651 · 41.4 cm × 42 mm · swept fins · C6-5 · 18" chute',
+    nose: { shape: 'ogive', len: 110, shoulder: 25 },
+    stages: [
+      {
+        body: [{ len: 304, bt: 'BT60' }],
+        fins: [{ count: 4, poly: [[0, -0.6], [105, -0.6], [35, 66], [-25, 70], [-25, 35]], t: 3.2, phase: PI / 4 }],
+        mounts: [{ motor: 18, len: 70 }],
+        lug: { z: 120, len: 45 },
+      },
+    ],
+    preset: { massG: 58, kitWeightG: 68,  color: '#c62828', noseColor: '#111111', stages: [{ motorId: 'Estes-C6-5' }], recovery: { type: 'parachute', diameterIn: 18, cd: 0.75, massG: 10, color: '#111111' }, rod: '1/8x36' },
+  },
+  {
+    id: 'comanche3',
+    group: 'estes',
+    file: 'estes-comanche-3.stl',
+    name: 'Estes Comanche-3',
+    blurb: 'Kit #7245 · 3 stages · 104 cm × 25 mm · D12-0 → C6-0 → C6-7',
+    nose: { shape: 'ogive', len: 150, shoulder: 20 },
+    stages: [
+      { body: [{ len: 89, bt: 'BT50' }], fins: [fins(4, 75, 40, 55, 35, { phase: PI / 4 })], mounts: [{ motor: 24, len: 70 }] },
+      { body: [{ len: 89, bt: 'BT50' }], fins: [fins(4, 65, 35, 48, 30, { phase: PI / 4 })], mounts: [{ motor: 18, len: 72 }] },
+      { body: [{ len: 713, bt: 'BT50' }], fins: [fins(4, 58, 28, 40, 28, { phase: PI / 4 })], mounts: [{ motor: 18, len: 72 }], lug: { z: 250, len: 40 } },
+    ],
+    preset: { massG: 65, kitWeightG: 71, 
+      color: '#f5c518',
+      noseColor: '#111111',
+      stages: [{ motorId: 'Estes-D12-0' }, { motorId: 'Estes-C6-0' }, { motorId: 'Estes-C6-7' }],
+      recovery: { type: 'streamer', streamerWidth: 50, streamerLength: 900, cd: 0.25, massG: 6, color: '#ff1744' },
+      rod: '3/16x36',
+    },
+  },
+  {
+    id: 'meanmachine',
+    group: 'estes',
+    file: 'estes-mean-machine.stl',
+    name: 'Estes Mean Machine',
+    blurb: 'Kit #1295 · 200.7 cm × 42 mm — almost 80 inches · E12-6 · 24" chute',
+    nose: { shape: 'ogive', len: 127, shoulder: 25 },
+    stages: [{ body: [{ len: 1880, bt: 'BT60' }], fins: [fins(4, 100, 50, 65, 50, { t: 3.2, phase: PI / 4 })], mounts: [{ motor: 24, len: 95 }], lug: { z: 700, len: 60 } }],
+    preset: { massG: 227, kitWeightG: 241,  color: '#eeeeee', noseColor: '#d32f2f', stages: [{ motorId: 'Estes-E12-6' }], recovery: { type: 'parachute', diameterIn: 24, cd: 0.75, massG: 14, color: '#d32f2f' }, rod: '3/16x48' },
+  },
+  {
+    id: 'mosquito',
+    group: 'estes',
+    file: 'estes-mosquito.stl',
+    name: 'Estes Mosquito',
+    blurb: 'The famous 9.6 cm × 14 mm micro rocket · A10-3T · tumble recovery',
+    nose: { shape: 'ogive', len: 30, shoulder: 8 },
+    stages: [{ body: [{ len: 66, bt: 'BT5' }], fins: [fins(3, 34, 20, 31, 45, { t: 1.6 })], mounts: [{ motor: 13, len: 45 }] }],
+    preset: { massG: 1.6, noseWeightG: 1.5, kitWeightG: 3.1,  color: '#ffffff', noseColor: '#ffffff', stages: [{ motorId: 'Estes-A10-3T' }], recovery: { type: 'tumble', massG: 0 }, rod: '1/8x36' },
+  },
+  {
+    id: 'wizard',
+    group: 'estes',
+    file: 'estes-wizard.stl',
+    name: 'Estes Wizard',
+    blurb: 'Kit #1292 · 30.5 cm × 18.7 mm (BT-20) · C6-7 · streamer',
+    nose: { shape: 'ogive', len: 75, shoulder: 18 },
+    stages: [{ body: [{ len: 230, bt: 'BT20' }], fins: [fins(4, 55, 15, 32, 45, { t: 1.6, phase: PI / 4 })], mounts: [{ motor: 18, len: 70 }], lug: { z: 80, len: 35 } }],
+    preset: { massG: 12, kitWeightG: 14,  color: '#1565c0', noseColor: '#fafafa', stages: [{ motorId: 'Estes-C6-7' }], recovery: { type: 'streamer', streamerWidth: 25, streamerLength: 500, cd: 0.25, massG: 2, color: '#ffeb3b' }, rod: '1/8x36' },
+  },
+  {
+    id: 'v2',
+    group: 'estes',
+    file: 'estes-v2.stl',
+    name: 'Estes V-2',
+    blurb: 'Kit #3228 · 56.9 cm × 66 mm scale V-2 · 24 mm · D12-3 · 18" chute',
+    nose: { shape: 'ogive', len: 179, shoulder: 30 },
+    stages: [
+      {
+        body: [{ transition: true, len: 160, od0: 48, od1: 66 }, { len: 230, bt: 'BT80' }],
+        fins: [{ count: 4, poly: [[0, -0.6], [150, -0.6], [118, 20], [60, 44], [8, 52], [-14, 50], [-14, 8]], t: 3.0, r: 26, phase: 0 }],
+        mounts: [{ motor: 24, len: 95 }],
+        lug: { z: 180, len: 45, r: 33 },
+      },
+    ],
+    preset: { massG: 127, noseWeightG: 40, kitWeightG: 179,  color: '#f0f0f0', noseColor: '#1d1d1d', stages: [{ motorId: 'Estes-D12-3' }], recovery: { type: 'parachute', diameterIn: 18, cd: 0.75, massG: 12, color: '#f0f0f0' }, rod: '3/16x36' },
+  },
+  {
+    id: 'leviathan',
+    group: 'estes',
+    file: 'estes-leviathan.stl',
+    name: 'Estes Leviathan',
+    blurb: 'Pro Series #9700 · 105 cm × 76 mm (3") · 29 mm · F50-6 · 30" chute',
+    nose: { shape: 'ogive', len: 230, shoulder: 60 },
+    stages: [{ body: [{ len: 824, bt: 'T3IN' }], fins: [fins(4, 150, 70, 100, 70, { t: 3.2, phase: PI / 4 })], mounts: [{ motor: 29, len: 120 }], lug: { z: 300, len: 60 } }],
+    preset: { massG: 461, kitWeightG: 496,  color: '#2b2f33', noseColor: '#ff8f00', stages: [{ motorId: 'Estes-F50-6' }], recovery: { type: 'parachute', diameterIn: 30, cd: 0.75, massG: 35, color: '#ff8f00' }, rod: '1/4x72' },
+  },
+  {
+    id: 'patriot',
+    group: 'estes',
+    file: 'estes-patriot-m104.stl',
+    name: 'Estes Patriot M-104',
+    blurb: 'Kit #2056 · 54 cm × 42 mm missile replica · C6-5 · 12" chute',
+    nose: { shape: 'blunt', len: 160, shoulder: 25 },
+    stages: [{ body: [{ len: 381, bt: 'BT60' }], fins: [fins(4, 85, 25, 52, 60, { t: 2.4, phase: PI / 4 })], mounts: [{ motor: 18, len: 70 }], lug: { z: 150, len: 45 } }],
+    preset: { massG: 49, kitWeightG: 57,  color: '#d9d2b6', noseColor: '#f2f2f2', stages: [{ motorId: 'Estes-C6-5' }], recovery: { type: 'parachute', diameterIn: 12, cd: 0.75, massG: 8, color: '#d9d2b6' }, rod: '1/8x36' },
+  },
+];
