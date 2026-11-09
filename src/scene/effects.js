@@ -182,8 +182,9 @@ class PointPool {
 }
 
 export class Effects {
-  constructor(scene) {
-    this.smoke = new PointPool(scene, 26000);
+  constructor(scene, maxSmoke = 26000) {
+    this.scene = scene;
+    this.smoke = new PointPool(scene, maxSmoke);
     this.sparks = new PointPool(scene, 2000, { additive: true });
     this.windVec = [0, 0, 0];
     this.carry = 0;
@@ -311,5 +312,13 @@ export class Effects {
     this.smoke.clear();
     this.sparks.clear();
     this.resetTrails();
+  }
+
+  dispose() {
+    for (const p of [this.smoke, this.sparks]) {
+      this.scene.remove(p.points);
+      p.geo.dispose();
+      p.mat.dispose();
+    }
   }
 }

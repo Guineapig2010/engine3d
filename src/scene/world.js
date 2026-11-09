@@ -2,6 +2,41 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { Lensflare, LensflareElement } from 'three/examples/jsm/objects/Lensflare.js';
+
+export const QUALITY = {
+  low: { label: 'Low', pixelRatio: 1, shadows: 0, bloom: false, grade: false, flare: false, grass: 0, grassR: 0, clouds: 0, smoke: 9000 },
+  medium: { label: 'Medium', pixelRatio: 1.25, shadows: 1024, bloom: false, grade: false, flare: false, grass: 0, grassR: 0, clouds: 18, smoke: 16000 },
+  high: { label: 'High', pixelRatio: 1.5, shadows: 2048, bloom: true, grade: false, flare: false, grass: 45000, grassR: 16, clouds: 28, smoke: 26000 },
+  ultra: { label: 'Ultra', pixelRatio: 2, shadows: 4096, bloom: true, grade: true, flare: true, grass: 160000, grassR: 30, clouds: 40, smoke: 42000 },
+};
+
+// cinematic colour grade: gentle S-curve, warm highlights, vignette and film grain
+const GradeShader = {
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uVignette: { value: 0.35 }, uGrain: { value: 0.035 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uTime, uVignette, uGrain; varying vec2 vUv;
+    float rand(vec2 c){ return fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      // subtle chromatic fringe toward the edges
+      vec2 d = (vUv - 0.5) * 0.0025;
+      c.r = texture2D(tDiffuse, vUv + d).r;
+      c.b = texture2D(tDiffuse, vUv - d).b;
+      c.rgb = mix(c.rgb, c.rgb * vec3(1.04, 1.0, 0.95), 0.6);
+      c.rgb = c.rgb * c.rgb * (3.0 - 2.0 * c.rgb) * 0.25 + c.rgb * 0.75;
+      float v = smoothstep(0.85, 0.25, length(vUv - 0.5));
+      c.rgb *= mix(1.0 - uVignette, 1.0, v);
+      c.rgb += (rand(vUv * 913.0 + uTime) - 0.5) * uGrain;
+      gl_FragColor = c;
+    }`,
+};
 
 export class World {
   constructor(container) {
@@ -32,7 +67,6 @@ export class World {
 
     this.buildSky();
     this.buildLights();
-    this.buildGround();
     this.buildScenery();
 
     this.raycaster = new THREE.Raycaster();
@@ -192,11 +226,90 @@ export class World {
     const w = this.container.clientWidth || window.innerWidth;
     const h = this.container.clientHeight || window.innerHeight;
     this.renderer.setSize(w, h);
+    this.composer?.setSize(w, h);
+    this.composer?.setPixelRatio?.(this.renderer.getPixelRatio());
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
 
-  render() {
-    this.renderer.render(this.scene, this.camera);
+  /** Apply a graphics preset (see QUALITY). */
+  setQuality(level) {
+    const q = QUALITY[level] || QUALITY.high;
+    this.quality = level;
+    const r = this.renderer;
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatio));
+    r.shadowMap.enabled = q.shadows > 0;
+    this.sunLight.castShadow = q.shadows > 0;
+    if (q.shadows) {
+      this.sunLight.shadow.mapSize.set(q.shadows, q.shadows);
+      this.sunLight.shadow.map?.dispose();
+      this.sunLight.shadow.map = null;
+      this.sunLight.shadow.radius = q.shadows >= 4096 ? 3 : 1.5;
+      const ext = q.shadows >= 4096 ? 14 : q.shadows >= 2048 ? 9 : 6;
+      const sc = this.sunLight.shadow.camera;
+      sc.left = sc.bottom = -ext;
+      sc.right = sc.top = ext;
+      sc.updateProjectionMatrix();
+    }
+    r.shadowMap.needsUpdate = true;
+    this.scene.traverse((o) => {
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => (m.needsUpdate = true));
+    });
+    // post-processing chain
+    this.composer?.dispose?.();
+    this.composer = null;
+    if (q.bloom || q.grade) {
+      const c = new EffectComposer(r);
+      c.addPass(new RenderPass(this.scene, this.camera));
+      if (q.bloom) {
+        const size = r.getSize(new THREE.Vector2());
+        this.bloom = new UnrealBloomPass(size, level === 'ultra' ? 0.55 : 0.4, 0.5, 0.92);
+        c.addPass(this.bloom);
+      }
+      c.addPass(new OutputPass());
+      if (q.grade) {
+        this.grade = new ShaderPass(GradeShader);
+        c.addPass(this.grade);
+      }
+      this.composer = c;
+    }
+    // lens flare from the sun
+    if (q.flare && !this.flare) {
+      this.flare = new THREE.PointLight(0xffffff, 0, 1);
+      this.flare.position.copy(this.sun).multiplyScalar(3500);
+      const lf = new Lensflare();
+      lf.addElement(new LensflareElement(flareTexture(256, 'rgba(255,240,220,1)'), 420, 0, new THREE.Color(1, 0.95, 0.85)));
+      lf.addElement(new LensflareElement(flareTexture(64, 'rgba(160,200,255,0.9)'), 60, 0.6));
+      lf.addElement(new LensflareElement(flareTexture(64, 'rgba(255,200,140,0.8)'), 90, 0.7));
+      lf.addElement(new LensflareElement(flareTexture(64, 'rgba(140,255,200,0.6)'), 140, 0.9));
+      lf.addElement(new LensflareElement(flareTexture(64, 'rgba(200,160,255,0.6)'), 70, 1.0));
+      this.flare.add(lf);
+      this.scene.add(this.flare);
+    }
+    if (this.flare) this.flare.visible = q.flare;
+    this.resize();
+    return q;
   }
+
+  render(time = 0) {
+    if (this.composer) {
+      if (this.grade) this.grade.uniforms.uTime.value = time % 100;
+      this.composer.render();
+    } else this.renderer.render(this.scene, this.camera);
+  }
+}
+
+function flareTexture(size, color) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  gr.addColorStop(0, color);
+  gr.addColorStop(0.25, color.replace(/[\d.]+\)$/, '0.35)'));
+  gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, size, size);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }

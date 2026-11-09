@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import './style.css';
-import { World } from './scene/world.js';
+import { World, QUALITY } from './scene/world.js';
+import { Environment } from './scene/environment.js';
 import { LaunchPad, ROD_SPECS } from './scene/launchPad.js';
 import { LaunchController, LaunchLead, CORD_LENGTH } from './scene/controller.js';
 import { RocketModel, propellantLook } from './scene/rocketModel.js';
@@ -44,6 +45,7 @@ class App {
     this.controller = new LaunchController();
     this.scene.add(this.controller.group);
     this.lead = new LaunchLead(this.scene);
+    this.env = new Environment(this.world);
     this.effects = new Effects(this.scene);
     this.sound = new Sound();
     this.trail = this.makeTrail();
@@ -107,6 +109,13 @@ class App {
     this.hudChart = new LineChart($('#hudChart'), { yLabel: 'Alt (m)' });
     this.resChart = new LineChart($('#resChart'));
     this.bindUI();
+    let q = 'high';
+    try {
+      q = localStorage.getItem('rfl-quality') || q;
+    } catch {
+      /* storage unavailable */
+    }
+    this.setQuality(QUALITY[q] ? q : 'high');
     this.placeController();
     this.player.lookAt(TABLE_POS.clone().add(V(-0.6, 0.6, -0.6)));
     this.loadExample('sparrow');
@@ -119,6 +128,7 @@ class App {
     $('#xray').addEventListener('change', (e) => this.model?.setXray(e.target.checked));
     $('#sound').addEventListener('change', (e) => this.sound.setEnabled(e.target.checked));
     $('#panelToggle').addEventListener('click', () => document.body.classList.toggle('panel-hidden'));
+    $('#quality').addEventListener('change', (e) => this.setQuality(e.target.value));
     $('#resetBtn').addEventListener('click', () => this.resetRange());
     $('#reportBtn').addEventListener('click', () => $('#results').classList.remove('hidden'));
     document.querySelectorAll('.hud-controls [data-speed]').forEach((b) =>
@@ -231,6 +241,25 @@ class App {
       if (/\.eng$/i.test(f.name)) this.panel.importEng(f);
       else this.loadFile(f);
     });
+  }
+
+  /** Graphics preset: renderer, post effects, grass, clouds and smoke budget. */
+  setQuality(level) {
+    const q = this.world.setQuality(level);
+    this.env.setGrass(q.grass, q.grassR);
+    this.env.setClouds(q.clouds);
+    if (this.effects.smoke.max !== q.smoke) {
+      const wind = this.effects.windVec;
+      this.effects.dispose();
+      this.effects = new Effects(this.scene, q.smoke);
+      this.effects.setWind(wind);
+    }
+    $('#quality').value = level;
+    try {
+      localStorage.setItem('rfl-quality', level);
+    } catch {
+      /* storage unavailable */
+    }
   }
 
   toast(msg, ms = 3800) {
@@ -1752,12 +1781,13 @@ class App {
     }
     this.lead.update();
     this.effects.update(dt * (this.flight && !this.flight.done ? this.speed : 1));
+    this.env.update(dt, this.time, this.effects.windVec, this.player.pos);
     this.updateFocus();
     this.updateMarker();
     // don't cover the rocket with the crosshair while you're tracking it
     document.body.classList.toggle('tracking', !!(this.track && this.flight && !this.flight.done));
     if (Math.floor(this.time * 4) !== Math.floor((this.time - dt) * 4)) this.updateChecklist();
-    this.world.render();
+    this.world.render(this.time);
   }
 }
 
