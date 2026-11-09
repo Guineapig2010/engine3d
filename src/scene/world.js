@@ -11,9 +11,9 @@ import { Lensflare, LensflareElement } from 'three/examples/jsm/objects/Lensflar
 
 export const QUALITY = {
   low: { label: 'Low', pixelRatio: 1, shadows: 0, bloom: false, grade: false, flare: false, grass: 0, grassR: 0, clouds: 0, smoke: 9000 },
-  medium: { label: 'Medium', pixelRatio: 1.25, shadows: 1024, bloom: false, grade: false, flare: false, grass: 0, grassR: 0, clouds: 18, smoke: 16000 },
-  high: { label: 'High', pixelRatio: 1.5, shadows: 2048, bloom: true, grade: false, flare: false, grass: 45000, grassR: 16, clouds: 28, smoke: 26000 },
-  ultra: { label: 'Ultra', pixelRatio: 2, shadows: 4096, bloom: true, grade: true, flare: true, grass: 130000, grassR: 26, clouds: 40, smoke: 42000 },
+  medium: { label: 'Medium', pixelRatio: 1, shadows: 1024, bloom: false, grade: false, flare: false, grass: 0, grassR: 0, clouds: 18, smoke: 16000 },
+  high: { label: 'High', pixelRatio: 1.25, shadows: 2048, bloom: true, grade: false, flare: false, grass: 25000, grassR: 14, clouds: 28, smoke: 26000 },
+  ultra: { label: 'Ultra', pixelRatio: 2, shadows: 4096, bloom: true, grade: true, flare: true, grass: 90000, grassR: 22, clouds: 40, smoke: 36000 },
 };
 
 // cinematic colour grade: gentle S-curve, warm highlights, vignette and film grain
@@ -41,7 +41,7 @@ const GradeShader = {
 export class World {
   constructor(container) {
     this.container = container;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -54,7 +54,7 @@ export class World {
 
     const scene = new THREE.Scene();
     this.scene = scene;
-    this.camera = new THREE.PerspectiveCamera(50, 1, 0.01, 8000);
+    this.camera = new THREE.PerspectiveCamera(50, 1, 0.02, 7000);
     this.camera.position.set(1.6, 1.0, 2.2);
 
     this.controls = new OrbitControls(this.camera, renderer.domElement);

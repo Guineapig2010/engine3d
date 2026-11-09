@@ -109,13 +109,13 @@ class App {
     this.hudChart = new LineChart($('#hudChart'), { yLabel: 'Alt (m)' });
     this.resChart = new LineChart($('#resChart'));
     this.bindUI();
-    let q = 'high';
+    let q = 'medium';
     try {
       q = localStorage.getItem('rfl-quality') || q;
     } catch {
       /* storage unavailable */
     }
-    this.setQuality(QUALITY[q] ? q : 'high');
+    this.setQuality(QUALITY[q] ? q : 'medium');
     this.placeController();
     this.player.lookAt(TABLE_POS.clone().add(V(-0.6, 0.6, -0.6)));
     this.loadExample('sparrow');
@@ -259,6 +259,26 @@ class App {
       localStorage.setItem('rfl-quality', level);
     } catch {
       /* storage unavailable */
+    }
+  }
+
+  /** Drop one graphics level automatically if the game runs below ~28 fps for a few seconds. */
+  trackFps(dt) {
+    if (this.time < 6 || document.hidden) return;
+    const f = (this._fps ||= { t: 0, n: 0, slow: 0 });
+    f.t += dt;
+    f.n++;
+    if (f.t < 2) return;
+    const fps = f.n / f.t;
+    f.t = 0;
+    f.n = 0;
+    f.slow = fps < 28 ? f.slow + 1 : 0;
+    const order = ['low', 'medium', 'high', 'ultra'];
+    const i = order.indexOf(this.world.quality);
+    if (f.slow >= 2 && i > 0) {
+      f.slow = 0;
+      this.setQuality(order[i - 1]);
+      this.toast(`Running at ${fps.toFixed(0)} fps — graphics lowered to ${QUALITY[order[i - 1]].label}. You can change it in the top bar.`, 5000);
     }
   }
 
@@ -670,8 +690,8 @@ class App {
     this.placeKit();
   }
 
-  placeKit() {
-    const onTable = this.g.rocketAt === 'table';
+  placeKit(inHand = false) {
+    const onTable = this.g.rocketAt === 'table' && !inHand;
     let sp;
     let pp;
     let dir;
@@ -701,6 +721,53 @@ class App {
       this.plug.group.position.copy(pp);
       this.plug.group.quaternion.setFromUnitVectors(UP, V(0, 0, 1).applyAxisAngle(UP, 0.4));
       this.kitPlugHome = { p: this.plug.group.position.clone(), q: this.plug.group.quaternion.clone() };
+    }
+  }
+
+  /**
+   * Gaps between the fins (rocket frame, angle in the x–z plane). The launch rod
+   * uses gap 0; close-ups look in through the gap opposite it, so fins never block
+   * the view, and the starter leads are turned to spread across the screen.
+   */
+  camGapAngle() {
+    const fins = [...this.geom.finSets].sort((a, b) => b.xLE - a.xLE)[0];
+    if (!fins || !fins.angles?.length) return Math.PI;
+    const n = fins.count;
+    return fins.angles[0] + Math.PI / n + Math.floor(n / 2) * ((2 * Math.PI) / n);
+  }
+
+  /** World direction (horizontal) from the rocket axis out through the close-up gap. */
+  gapDirWorld() {
+    const psi = this.camGapAngle();
+    const d = V(Math.cos(psi), 0, Math.sin(psi)).applyQuaternion(this.model.root.quaternion);
+    d.y = 0;
+    return d.lengthSq() > 1e-6 ? d.normalize() : V(1, 0, 0);
+  }
+
+  /** Installed starter orientation: leads spread at right angles to the close-up view. */
+  starterInstallQ() {
+    return new THREE.Quaternion().setFromAxisAngle(UP, -(this.camGapAngle() + Math.PI / 2));
+  }
+
+  /** Invisible click targets (nozzle, lead ends) so nothing depends on pixel-perfect drags. */
+  ensureProxies() {
+    if (this.proxies) return this.proxies;
+    const mk = (r) => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), new THREE.MeshBasicMaterial({ visible: false }));
+      this.scene.add(m);
+      return m;
+    };
+    this.proxies = { nozzle: mk(0.013), leads: [mk(0.009), mk(0.009)] };
+    return this.proxies;
+  }
+
+  updateProxies() {
+    if (!this.proxies || !this.closeup.active) return;
+    const N = this.nozzleWorld(0);
+    if (N) this.proxies.nozzle.position.copy(N);
+    if (this.starter && this.g.starter !== 'kit') {
+      const ends = this.starter.leadEnds();
+      ends.forEach((p, i) => this.proxies.leads[i].position.copy(p));
     }
   }
 
@@ -750,7 +817,11 @@ class App {
       }
       if (g.clipOn.every((c) => c === null)) out.push({ p: deflector.clone().add(V(0, this.geom.length * 0.6, 0)), reach: 1.6, label: 'Take the rocket off the rod', act: () => this.takeOffRod() });
     }
-    if (g.controller === 'ground') out.push({ p: this.controller.group.position.clone(), reach: 1.8, label: 'Pick up the launch controller', act: () => this.pickUpController() });
+    if (g.controller === 'ground') {
+      if (this.controller.keyState === 'in')
+        out.push({ p: this.controller.group.position.clone(), reach: 1.8, label: 'Take the safety key out of the controller', act: () => { this.controller.setKeyState('out'); this.sound.click(); } });
+      else out.push({ p: this.controller.group.position.clone(), reach: 1.8, label: 'Pick up the launch controller', act: () => this.pickUpController() });
+    }
     if (this.flight?.done && !g.recovered) {
       const p = this.model.root.position.clone();
       out.push({ p, reach: 3.0, label: 'Recover the rocket', act: () => this.recoverRocket() });
@@ -909,15 +980,15 @@ class App {
       const N = this.nozzleWorld(0);
       const a = this.motorAxisWorld();
       if (!onPad) {
-        const kit = this.kitStarterHome ? this.kitStarterHome.p : N;
-        const mid = new THREE.Vector3().lerpVectors(N, kit, 0.45);
-        const pos = mid.clone().addScaledVector(a, -0.17).addScaledVector(this.tableAcross, 0.06).add(V(0, 0.16, 0));
-        return { pos, look: mid, fov: 44 };
+        // on the table: look straight into the nozzle from behind the tail (fins can't block it)
+        const side = V(-a.z, 0, a.x).normalize();
+        const pos = N.clone().addScaledVector(a, -0.17).add(V(0, 0.045, 0)).addScaledVector(side, 0.015);
+        return { pos, look: N.clone(), fov: 44 };
       }
-      const side = this.player.pos.clone().setY(0).sub(N.clone().setY(0)).normalize();
-      const pos = N.clone().addScaledVector(side, 0.17).add(V(0, -0.02, 0));
-      pos.y = Math.max(pos.y, 0.07);
-      return { pos, look: N.clone().add(V(0, -0.012, 0)), fov: 46 };
+      // on the pad: crouch and look in through the gap between two fins
+      const gap = this.gapDirWorld();
+      const pos = N.clone().addScaledVector(gap, 0.17).add(V(0, 0.012, 0));
+      return { pos, look: N.clone().add(V(0, -0.004, 0)), fov: 46 };
     };
     const target = () => this.nozzleWorld(0).addScaledVector(this.motorAxisWorld(), 0.002);
     const grabAlign = (obj) => {
@@ -955,6 +1026,19 @@ class App {
       ],
       pressables: [
         {
+          // click the nozzle: starter in → plug in → bend the leads
+          obj: this.ensureProxies().nozzle,
+          enabled: () => g.starter === 'kit' || g.plug === 'kit' || this.starter.bend < 0.99,
+          onDown: () => {
+            if (g.starter === 'kit') this.installStarter();
+            else if (g.plug === 'kit') this.installPlug();
+            else if (this.bendAnim == null && this.starter.bend < 0.99) {
+              this.bendAnim = 0;
+              this.sound.click();
+            }
+          },
+        },
+        {
           obj: this.starter.group,
           enabled: () => g.starter === 'installed' && g.plug === 'installed' && this.starter.bend < 0.99,
           onDown: () => {
@@ -968,14 +1052,15 @@ class App {
         const s2 = g.plug === 'installed';
         const s3 = this.starter.bend > 0.99;
         const li = (done, txt) => `<div class="${done ? 'ok' : ''}">${done ? '✓' : '•'} ${txt}</div>`;
-        return `<b>Install the starter</b> — drag with the mouse.
-          ${li(s1, 'Drag the starter (copper leads, dark tip) into the motor nozzle until the tip touches the propellant.')}
-          ${li(s2, 'Drag the red plastic plug into the nozzle to hold the starter in place.')}
-          ${li(s3, 'Click the leads to bend them apart so they can’t touch each other.')}
+        return `<b>Install the starter</b> — drag the parts from your hand (bottom right), or just click the nozzle for each step.
+          ${li(s1, 'Starter (copper leads, dark tip) into the nozzle until the tip touches the propellant.')}
+          ${li(s2, 'Red plastic plug into the nozzle to hold the starter in place.')}
+          ${li(s3, 'Bend the leads apart so they can’t touch each other (click the leads or the nozzle).')}
           <div style="margin-top:6px;color:var(--muted)">${s1 && s2 && s3 ? '<span class="ok">Ready.</span> ' : ''}Press <kbd>E</kbd> or <kbd>Esc</kbd> to finish.</div>`;
       },
     };
-    if (onPad) this.placeKitInHandAfterTween = true;
+    this.placeKitInHandAfterTween = true;
+    this.ensureProxies();
     this.closeup.enter(spec);
   }
 
@@ -991,7 +1076,7 @@ class App {
   installStarter() {
     const motor = this.model.igniterMotor;
     motor.group.attach(this.starter.group);
-    (this.slides ||= []).push({ obj: this.starter.group, from: this.starter.group.position.clone(), fromQ: this.starter.group.quaternion.clone(), t: 0 });
+    (this.slides ||= []).push({ obj: this.starter.group, from: this.starter.group.position.clone(), fromQ: this.starter.group.quaternion.clone(), toQ: this.starterInstallQ(), t: 0 });
     this.g.starter = 'installed';
     this.sound.click();
   }
@@ -1009,7 +1094,7 @@ class App {
       S.t = Math.min(1, S.t + dt / 0.3);
       const e = ease(S.t);
       S.obj.position.lerpVectors(S.from, V(0, 0, 0), e);
-      S.obj.quaternion.slerpQuaternions(S.fromQ, new THREE.Quaternion(), e);
+      S.obj.quaternion.slerpQuaternions(S.fromQ, S.toQ || new THREE.Quaternion(), e);
     }
     if (this.slides) this.slides = this.slides.filter((S) => S.t < 1);
     if (this.bendAnim !== undefined && this.bendAnim !== null) {
@@ -1039,13 +1124,14 @@ class App {
       this.toast('Bend the starter leads apart first.');
       return;
     }
-    const N0 = this.nozzleWorld(0);
-    this.clipSide = this.player.pos.clone().setY(0).sub(N0.clone().setY(0)).normalize();
+    // look in through the fin gap opposite the rod; the leads spread left and right across the view
+    this.clipSide = this.gapDirWorld();
     const camPose = () => {
       const N = this.nozzleWorld(0);
-      const pos = N.clone().addScaledVector(this.clipSide, 0.2).add(V(0, 0.075, 0));
-      return { pos, look: N.clone().addScaledVector(this.clipSide, 0.03).add(V(0, -0.01, 0)), fov: 45 };
+      const pos = N.clone().addScaledVector(this.clipSide, 0.19).add(V(0, 0.06, 0));
+      return { pos, look: N.clone().addScaledVector(this.clipSide, 0.025).add(V(0, -0.006, 0)), fov: 46 };
     };
+    const proxies = this.ensureProxies();
     const leadTargets = (i) => () => {
       const ends = this.starter.leadEnds();
       return ends.map((p, lead) => ({
@@ -1077,9 +1163,21 @@ class App {
           this.dragClip = null;
         },
       })),
+      pressables: [0, 1].map((lead) => ({
+        // click a bare lead: the nearest free clip goes onto it
+        obj: proxies.leads[lead],
+        enabled: () => !g.clipOn.includes(lead) && g.clipOn.includes(null),
+        onDown: () => {
+          const i = g.clipOn.indexOf(null);
+          if (i >= 0) {
+            g.clipOn[i] = lead;
+            this.sound.click();
+          }
+        },
+      })),
       hint: () => {
         const n = g.clipOn.filter((c) => c !== null).length;
-        return `<b>Hook up the micro-clips</b> — drag each clip onto a starter lead.
+        return `<b>Hook up the micro-clips</b> — drag each clip onto a starter lead, or click a lead to clip it.
           <div class="${n === 2 ? 'ok' : ''}">${n === 2 ? '✓ Both clips on — one per lead.' : `${n}/2 clips attached.`}</div>
           <div style="color:var(--muted)">Keep the clips from touching each other, the launch rod and the blast deflector. Then walk back to the controller. <kbd>E</kbd>/<kbd>Esc</kbd> to stand up.</div>`;
       },
@@ -1120,7 +1218,7 @@ class App {
     this.enterControllerCloseup();
   }
 
-  putDownController() {
+  putDownController(silent = false) {
     if (this.closeup.active?.id === 'controller') this.closeup.exit();
     this.g.controller = 'ground';
     this.controller.held = false;
@@ -1130,7 +1228,7 @@ class App {
     this.controllerGround = this.player.pos.clone().addScaledVector(f, 0.45).setY(0.017);
     this.player.tether = null;
     this.placeController();
-    if (this.controller.keyState === 'out') this.toast('Controller down. The safety key is in your pocket.');
+    if (!silent && this.controller.keyState === 'out') this.toast('Controller down. The safety key is in your pocket.');
   }
 
   placeController() {
@@ -1338,13 +1436,12 @@ class App {
     this.g.clipOn = [null, null];
     this.g.rocketAt = 'flight';
     this.g.recovered = false;
-    // look up! drop the controller to your side and lock your view onto the rocket
+    // set the controller down and look at the pad — then look up and watch it yourself
     if (this.closeup.active) this.leaveCloseup();
-    if (this.g.controller === 'inspect') this.g.controller = 'hand';
+    if (this.g.controller !== 'ground') this.putDownController(true);
     if (this.view === 'eyes') {
-      this.track = true;
-      this.player.lookAt(this.tailOnPad().add(V(0, this.geom.length * 0.6, 0)));
       this.player.zoom = 1;
+      this.player.lookAt(this.tailOnPad().add(V(0, this.geom.length * 0.6, 0)));
     }
     $('#hud').classList.remove('hidden');
     this.hudChart.set({ series: [{ name: 'Altitude', color: '#ff6a1f', unit: 'm', points: sim.samples.map((s) => [s.t, s.alt]) }], yLabel: 'Alt (m)' });
@@ -1656,11 +1753,7 @@ class App {
       if (!inCloseupCam) {
         // track assist; if you move the mouse it lets go for a moment so you can look around
         if (this.track && this.flight && !this.closeup.active && performance.now() - this.player.lastManualLook > 900) {
-          this.player.steerToward(target, dt, this.playT < 1.5 ? 12 : 6);
-          // keep the rocket a visible size: zoom like a spotter with binoculars
-          const dist = this.player.eyePos().distanceTo(target);
-          const want = THREE.MathUtils.clamp((dist * 0.05) / Math.max(0.05, this.geom.length), 1, 20);
-          this.player.zoom += (want - this.player.zoom) * (1 - Math.exp(-dt * 2));
+          this.player.steerToward(target, dt, 6);
         }
         this.player.update(dt);
       } else this.closeup.update(dt);
@@ -1770,7 +1863,10 @@ class App {
   // ===================================================================== main loop
   loop() {
     requestAnimationFrame(() => this.loop());
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const rawDt = this.clock.getDelta();
+    const dt = Math.min(0.05, rawDt); // for animation & input smoothing
+    this.flightDt = Math.min(0.25, rawDt); // flight plays in real time even when frames are slow
+    this.trackFps(rawDt);
     this.time += dt;
     this.pad.update(dt);
     this.updateAnim(dt);
@@ -1783,23 +1879,24 @@ class App {
     this.updateControllerPose();
     this.controller.update(dt, this.time);
     this.updateCircuit(dt);
-    if (this.flight) this.updateFlight(dt);
+    if (this.flight) this.updateFlight(this.flightDt);
     if (this.model) {
       this.model.updateAttached();
       this.model.updateClipping();
     }
     if (this.placeKitInHandAfterTween && this.closeup.tween?.k >= 1) {
       this.placeKitInHandAfterTween = false;
-      this.placeKit();
+      this.placeKit(true);
     }
     this.updateClips();
+    this.updateProxies();
     if (this.cordDirty && this.time - (this._cordT || 0) > 0.05) {
       this._cordT = this.time;
       this.cordDirty = false;
       this.lead.setEnds(this.controller.cordExitWorld(), JUNCTION);
     }
     this.lead.update();
-    this.effects.update(dt * (this.flight && !this.flight.done ? this.speed : 1));
+    this.effects.update((this.flight && !this.flight.done ? this.flightDt * this.speed : dt));
     this.env.update(dt, this.time, this.effects.windVec, this.player.pos);
     this.updateFocus();
     this.updateMarker();

@@ -124,6 +124,7 @@ class PointPool {
   }
 
   emit(p, v, o) {
+    this.dirty = true;
     const i = this.next;
     this.next = (this.next + 1) % this.max;
     this.pos.set(p, i * 3);
@@ -145,11 +146,16 @@ class PointPool {
 
   update(dt, windAt) {
     const w = [0, 0, 0];
+    let alive = 0;
     for (let i = 0; i < this.max; i++) {
       if (this.age[i] > this.life[i]) {
-        this.alpha[i] = 0;
+        if (this.alpha[i] !== 0) {
+          this.alpha[i] = 0;
+          alive++; // one more upload to hide it
+        }
         continue;
       }
+      alive++;
       const age = (this.age[i] += dt);
       const f = age / this.life[i];
       const k = Math.exp(-this.drag[i] * dt);
@@ -171,7 +177,10 @@ class PointPool {
       this.alpha[i] = (this.a0[i] * fadeIn * Math.pow(1 - f, 1.4)) / (1 + 0.12 * age);
       this.rot[i] += this.spin[i] * dt;
     }
-    for (const n of ['position', 'aSize', 'aAlpha', 'aColor', 'aRot']) this.geo.attributes[n].needsUpdate = true;
+    // nothing alive (most of the time on the ground): skip the GPU upload entirely
+    if (alive || this.dirty) for (const n of ['position', 'aSize', 'aAlpha', 'aColor', 'aRot']) this.geo.attributes[n].needsUpdate = true;
+    this.dirty = false;
+    this.points.visible = alive > 0;
   }
 
   clear() {
