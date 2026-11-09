@@ -394,6 +394,8 @@ export class Environment {
       sh.uniforms.uTime = u.uTime;
       sh.uniforms.uCenter = u.uCenter;
       sh.uniforms.uR = { value: radius };
+      // don't flip the normal for back faces (that turns half the blades black)
+      sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;', ''));
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', '#include <common>\nattribute vec4 aBlade;\nuniform float uTime;\nuniform vec2 uCenter;\nuniform float uR;')
         .replace(

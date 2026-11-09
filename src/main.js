@@ -613,10 +613,29 @@ class App {
     q.multiply(new THREE.Quaternion().setFromAxisAngle(UP, Math.PI / 6));
     const groups = this.assembly ? m.sections.map((s) => [s]) : [m.sections];
     const n = groups.length;
+    // lay separate parts side by side, spaced by their own fin size
+    const partR = groups.map((secs) => {
+      const y0 = Math.min(...secs.map((s) => s.y0));
+      const y1 = Math.max(...secs.map((s) => s.y1));
+      const L = this.geom.length;
+      let r = this.geom.refRadius * 0.6;
+      for (const f of this.geom.finSets) {
+        const yMid = L - (f.xLE + f.Cr / 2);
+        if (yMid >= y0 && yMid <= y1) r = Math.max(r, f.rBody + f.span);
+      }
+      return r * 0.8;
+    });
+    const total = partR.reduce((a, r) => a + 2 * r, 0) + 0.02 * (n - 1);
+    let acc = -total / 2;
+    const offs = partR.map((r) => {
+      const o = acc + r;
+      acc += 2 * r + 0.02;
+      return o;
+    });
     groups.forEach((secs, i) => {
       const y0 = Math.min(...secs.map((s) => s.y0));
       const y1 = Math.max(...secs.map((s) => s.y1));
-      const off = (i - (n - 1) / 2) * Math.min(0.15, 0.4 / n);
+      const off = n > 1 ? offs[i] : 0;
       const centre = TABLE_POS.clone().addScaledVector(across, off - 0.04).setY(h);
       for (const s of secs) {
         s.attached = false;
